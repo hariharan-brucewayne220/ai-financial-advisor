@@ -53,3 +53,4 @@ yarn-error.log*
 
 # Project specific
 .claude/
+.worktrees/
