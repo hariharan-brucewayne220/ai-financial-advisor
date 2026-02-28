@@ -1,0 +1,23 @@
+/**
+ * Global Styles
+ * Tailwind CSS is configured via tailwind.config.js
+ * This file imports Tailwind directives
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-gray-900;
+}
+
+/* Utility classes */
+.app-container {
+  @apply w-screen h-screen;
+}

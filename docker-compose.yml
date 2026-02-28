@@ -1,0 +1,183 @@
+services:
+  # ============================================================================
+  # PostgreSQL 16 with pgvector extension
+  # ============================================================================
+  postgres:
+    build:
+      context: .
+      dockerfile: postgres.Dockerfile
+    container_name: gs-postgres
+    environment:
+      POSTGRES_USER: advisor
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: financial_advisor_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U advisor -d financial_advisor_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - financial-advisor
+
+  # ============================================================================
+  # Redis 7 for caching and task queue
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: gs-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - financial-advisor
+
+  # ============================================================================
+  # LocalStack for S3 simulation (development only)
+  # ============================================================================
+  localstack:
+    image: localstack/localstack:latest
+    container_name: gs-localstack
+    environment:
+      SERVICES: s3
+      DEBUG: 0
+      DOCKER_HOST: unix:///var/run/docker.sock
+      LOCALSTACK_TMP_DIR: /var/lib/localstack/tmp
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports:
+      - "4566:4566"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - financial-advisor
+
+  # ============================================================================
+  # Backend API (FastAPI with async workers)
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gs-backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://advisor:password123@postgres:5432/financial_advisor_db
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: us-east-1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?error}
+      SECRET_KEY: dev-secret-key-change-in-production
+      FASTAPI_ENV: development
+      FASTAPI_DEBUG: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_cache:/app/.cache
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug
+    networks:
+      - financial-advisor
+
+  # ============================================================================
+  # Worker (ARQ async task queue for document ingestion)
+  # DISABLED for MVP - document processing is done inline with FastAPI
+  # Will be re-enabled when background job queue is needed
+  # ============================================================================
+  # worker:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: gs-worker
+  #   environment:
+  #     DATABASE_URL: postgresql+asyncpg://advisor:password123@postgres:5432/financial_advisor_db
+  #     REDIS_URL: redis://redis:6379/0
+  #     S3_ENDPOINT_URL: http://localstack:4566
+  #     AWS_REGION: us-east-1
+  #     OPENAI_API_KEY: ${OPENAI_API_KEY:?error}
+  #     SECRET_KEY: dev-secret-key-change-in-production
+  #     FASTAPI_ENV: development
+  #     PYTHONUNBUFFERED: "1"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./backend:/app
+  #     - backend_cache:/app/.cache
+  #   command: arq app.workers.arq_worker.settings_obj
+  #   networks:
+  #     - financial-advisor
+
+  # ============================================================================
+  # Frontend (React with Vite)
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gs-frontend
+    environment:
+      VITE_API_BASE_URL: /api
+      VITE_WS_URL: ws://localhost:8000/ws
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - financial-advisor
+
+  # ============================================================================
+  # Nginx Reverse Proxy
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: gs-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - financial-advisor
+
+volumes:
+  postgres_data:
+  redis_data:
+  localstack_data:
+  backend_cache:
+  frontend_node_modules:
+
+networks:
+  financial-advisor:
+    driver: bridge
