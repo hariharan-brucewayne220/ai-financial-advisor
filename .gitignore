@@ -54,3 +54,13 @@ yarn-error.log*
 # Project specific
 .claude/
 .worktrees/
+
+# Internal development notes (local only)
+PROJECT.md
+IMPLEMENTATION_SUMMARY.md
+INFRASTRUCTURE_IMPROVEMENTS.md
+TIER1_IMPLEMENTATION_SUMMARY.md
+INTEGRATION_GUIDE.md
+BUN_SETUP.md
+portfolio.csv
+test_integration.sh
