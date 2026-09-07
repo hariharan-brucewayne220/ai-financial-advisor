@@ -44,10 +44,13 @@ Document → PII Redaction → Chunking → Embedding → pgvector (HNSW)
                                                          │
 Query ──────────────────────────────────────── BM25 + Dense Search
                                                          │
-                                              RRF Fusion → Cross-Encoder Rerank
+                                              RRF Fusion → Rerank* → Compress*
                                                          │
                                               LangGraph Agent → SSE Stream
 ```
+
+\* The `rerank` and `compress` graph nodes are currently **pass-through placeholders**
+(see [Known Limitations](#known-limitations)).
 
 ---
 
@@ -56,7 +59,7 @@ Query ────────────────────────�
 | Layer | Technology |
 |---|---|
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Zustand |
-| Backend | FastAPI, Python 3.12, SQLAlchemy (async), Alembic |
+| Backend | FastAPI, Python 3.11, SQLAlchemy (async), Alembic |
 | LLM & Agents | OpenAI GPT-4o, LangGraph, LangChain |
 | Vector Search | PostgreSQL 16 + pgvector (HNSW index) |
 | Sparse Search | BM25Okapi (rank-bm25) |
@@ -141,23 +144,29 @@ Authorization: Bearer <token>
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/auth/login` | Obtain JWT token |
+| `POST` | `/api/auth/register` | Register an advisor, returns JWT tokens |
+| `POST` | `/api/auth/login` | Obtain JWT tokens |
+| `POST` | `/api/clients` | Create a client |
 | `GET` | `/api/clients` | List advisor's clients |
 | `POST` | `/api/documents/{client_id}/upload` | Upload a document for a client |
 | `GET` | `/api/documents/{client_id}` | List client documents |
-| `POST` | `/api/conversations` | Create a conversation |
-| `GET` | `/api/conversations/{id}/stream` | Stream Q&A response (SSE) |
-| `POST` | `/api/reports/{client_id}` | Generate a grounded financial report |
+| `GET` | `/api/documents/{client_id}/{document_id}/status` | Poll ingestion status |
+| `POST` | `/api/conversations/{client_id}/conversations` | Create a conversation |
+| `GET` | `/api/conversations/{client_id}/conversations/{conv_id}/messages?query=...` | Stream Q&A response (SSE; `token` may be passed as a query param for `EventSource`) |
+| `POST` | `/api/reports/{client_id}/generate?report_type=portfolio_summary` | Generate a grounded financial report |
+| `GET` | `/api/reports/{client_id}/{report_id}` | Fetch a generated report |
 
 ### SSE Stream Events
 
 The Q&A stream emits the following event types in order:
 
 ```
+event: step         # agent node in progress (classify, retrieve, rerank, ...)
 event: token        # partial response text
-event: sources      # retrieved document chunks
-event: metadata     # market data status, faithfulness score
+event: sources      # retrieved document chunk ids
+event: faithfulness # NLI faithfulness score for the answer
 event: done         # stream complete
+event: error        # terminal error (stream closes)
 ```
 
 ---
@@ -180,12 +189,14 @@ ai-financial-advisor/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # React components
-│   │   ├── hooks/           # Custom hooks (useChat, useDocuments)
-│   │   └── lib/             # API client, utilities
+│   │   ├── hooks/           # Custom hooks (useChat)
+│   │   └── lib/             # API client (api.ts) and JWT helpers (auth.ts)
 │   └── package.json
-├── infrastructure/          # Terraform modules (AWS ECS/RDS/S3)
+├── infrastructure/
+│   └── nginx/               # Nginx reverse-proxy config used by docker-compose
 ├── docker-compose.yml
 ├── postgres.Dockerfile      # PostgreSQL + pgvector image
+├── scripts/                 # init_db.sql schema, seed_data.py
 └── .env.example
 ```
 
@@ -220,14 +231,20 @@ alembic upgrade head
 alembic revision --autogenerate -m "description"
 ```
 
-### Running tests
+### Verifying a change
+
+There is **no automated test suite** in this repository yet (no `pytest` tests and no
+integration script). Until one exists, the checks are:
 
 ```bash
-# Backend
-cd backend && pytest
+# Frontend type-check + production build
+cd frontend && npm ci && npm run build
 
-# Integration tests (requires running stack)
-bash test_integration.sh
+# Backend: byte-compile everything to catch syntax/import-path errors
+cd backend && python -m compileall app
+
+# End-to-end: bring the stack up and exercise it through Swagger
+docker compose up --build   # then open http://localhost/api/docs
 ```
 
 ---
@@ -236,22 +253,41 @@ bash test_integration.sh
 
 - JWT tokens are validated cryptographically on every request
 - Advisor-client ownership is verified before any data access
-- PII is redacted via [Presidio](https://microsoft.github.io/presidio/) before document indexing
+- PII is redacted via [Presidio](https://microsoft.github.io/presidio/) before document indexing (requires `presidio-analyzer` and the spaCy `en_core_web_lg` model from `requirements.txt`; if the import fails the detector logs a warning and disables itself)
 - Market data availability is always explicit — responses never silently omit data
 - Reports hard-fail if the client has no indexed documents (no hallucination)
 - All Q&A responses include source citations and faithfulness scores
 
 ---
 
+## Known Limitations
+
+This is a working MVP; the following parts of the pipeline are not yet what the
+docstrings describe:
+
+- **Rerank stage is a placeholder.** `FinancialQAAgent._rerank_documents` sorts the
+  RRF-fused candidates by their existing score and truncates to `reranker_top_k`
+  (comment in code: "In production, would use cross-encoder here"). The
+  `cross-encoder/ms-marco-MiniLM-L-6-v2` setting in `config.py` is not used.
+- **Compress stage is a no-op.** `FinancialQAAgent._compress_context` joins the
+  reranked chunks and returns them unchanged with a `0.0` compression ratio
+  ("In production, would call LLMLingua here"). `ENABLE_COMPRESSION` and
+  `compression_target_ratio` have no effect.
+- **ARQ worker is not wired in.** Ingestion and report generation run as FastAPI
+  `BackgroundTasks`; the `worker` service is commented out in `docker-compose.yml`.
+- **Model downloads on first use.** Faithfulness scoring loads
+  `facebook/bart-large-mnli` (~1.6 GB) from the Hugging Face hub the first time the
+  QA agent is constructed.
+- **No automated tests** (see [Verifying a change](#verifying-a-change)).
+
+---
+
 ## Production Deployment
 
-Terraform modules for AWS are in `infrastructure/`. The production stack uses:
-
-- **ECS Fargate** for backend and frontend containers
-- **RDS PostgreSQL** with pgvector extension
-- **ElastiCache Redis** for task queue and caching
-- **S3** for document storage
-- **ALB** for load balancing and SSL termination
+There is **no infrastructure-as-code in this repository**; `infrastructure/` only
+holds the Nginx config for the local `docker-compose` stack. A cloud deployment
+(e.g. ECS Fargate + RDS PostgreSQL with pgvector + ElastiCache Redis + S3 + ALB)
+would need to be provisioned separately.
 
 ---
 
