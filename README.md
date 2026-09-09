@@ -278,6 +278,14 @@ docstrings describe:
 - **Model downloads on first use.** Faithfulness scoring loads
   `facebook/bart-large-mnli` (~1.6 GB) from the Hugging Face hub the first time the
   QA agent is constructed.
+- **Presidio tuning settings are not wired in.** `PRESIDIO_ENTITIES_TO_SCAN`,
+  `presidio_score_threshold` and `ENABLE_PII_DETECTION` are defined in `config.py`
+  but never read. `PIIDetector.detect_pii` always uses its own hard-coded entity
+  list and a `0.75` threshold, and the ingestion pipeline always runs it.
+- **`bm25_tokens` is never populated.** The column and its GIN index are created by
+  `scripts/init_db.sql`, but the ingestion pipeline does not write tokens, so
+  `HybridRetriever` falls back to tokenizing `chunk.content` at query time. BM25
+  works; the index does not contribute.
 - **No automated tests** (see [Verifying a change](#verifying-a-change)).
 
 ---

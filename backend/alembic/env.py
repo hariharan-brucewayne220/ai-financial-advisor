@@ -13,6 +13,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# alembic.ini pins the docker-compose hostname, which only resolves inside the
+# compose network. Prefer DATABASE_URL so `alembic upgrade head` also works when
+# the backend is run directly, as the README describes. "%" is escaped because
+# set_main_option feeds the value through ConfigParser interpolation.
+config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%", "%%"))
+
 target_metadata = Base.metadata
 
 

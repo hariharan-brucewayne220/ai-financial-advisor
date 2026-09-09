@@ -73,6 +73,12 @@ def create_app() -> FastAPI:
         version=settings.api_version,
         debug=settings.fastapi_debug,
         lifespan=lifespan,
+        # Every router is mounted under /api, and nginx proxies /api/ to this app
+        # without stripping the prefix, so the docs have to live under /api too for
+        # the documented http://localhost/api/docs to resolve.
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
     )
 
     # ====================================================================

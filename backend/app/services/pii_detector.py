@@ -140,8 +140,21 @@ class PIIDetector:
         if not entities:
             return text
 
+        # Presidio reports nested spans for the same value - the URL fragments
+        # inside an EMAIL_ADDRESS, for example. Splicing every span interleaves the
+        # replacements and corrupts the text, so first keep one span per region,
+        # preferring the widest (then the most confident) so the placeholder covers
+        # the whole value rather than part of it.
+        kept: List[PIIEntity] = []
+        for entity in sorted(
+            entities, key=lambda e: (e.end - e.start, e.confidence), reverse=True
+        ):
+            if any(entity.start < k.end and k.start < entity.end for k in kept):
+                continue
+            kept.append(entity)
+
         # Sort entities by position (descending) to avoid index shifting
-        sorted_entities = sorted(entities, key=lambda e: e.start, reverse=True)
+        sorted_entities = sorted(kept, key=lambda e: e.start, reverse=True)
 
         masked_text = text
         for entity in sorted_entities:
