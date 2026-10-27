@@ -176,7 +176,7 @@ frontend/                  React + Vite chat UI
 - **`bm25_tokens` is never populated,** so BM25 tokenizes chunk text on every query, and each request builds a fresh in-memory BM25 index because the agent is created per request.
 - **Dense search orders by L2 distance** while the HNSW index is built with cosine ops, so Postgres does not use the index for it. Rankings are the same for OpenAI's unit-length embeddings, but it is a sequential scan.
 - **The ARQ worker is not used.** Ingestion runs as a FastAPI background task.
-- **The Azure image is large.** It carries CPU torch, the spaCy model and the NLI weights, so the first request after scale-to-zero waits for the image pull and model load.
+- **The Azure image is large: 5.2 GB** (`docker image ls` in the `image` CI workflow). It carries CPU torch, the spaCy model and the NLI weights, so the first request after scale-to-zero waits for the image pull and model load. ACR Basic includes 10 GB, and later pushes reuse the large layers.
 
 ## Next steps
 

@@ -161,3 +161,23 @@ The L2 query cannot use the cosine index. Not changed on this branch:
 OpenAI embeddings are unit length, so L2 and cosine give the same ranking,
 and switching to the approximate index changes results, which should be
 measured with the eval first. Listed under Known limitations in the README.
+
+## 6. API image build (GitHub Actions)
+
+Workflow `image`, run 40552313369 on commit `8ebaf04`, ubuntu-latest:
+
+- `docker build -t finadv-api:ci backend` succeeded in about 2 minutes
+- `docker image ls finadv-api:ci --format '{{.Size}}'` printed `5.2GB`
+- With `HF_HUB_OFFLINE=1`, `python -c "import app.main; ...; _load_nli_pipeline(); print('ok')"`
+  printed `ok`, so the NLI weights are in the image and nothing is downloaded at start
+
+## Not run yet
+
+These need paid API calls or Azure resources and are waiting on the steps
+in the README:
+
+- pgvector, hybrid and Azure AI Search retrieval metrics
+- answer faithfulness and end-to-end latency for each backend
+- cost per 100 questions from real token usage
+- Azure AI Search index size on the Free tier
+- the Bicep deployment, the OIDC deploy workflow and teardown
