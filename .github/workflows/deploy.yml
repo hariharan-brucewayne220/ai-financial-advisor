@@ -35,7 +35,7 @@ jobs:
     env:
       IMAGE_TAG: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
