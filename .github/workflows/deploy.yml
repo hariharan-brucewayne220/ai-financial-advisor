@@ -1,0 +1,82 @@
+name: deploy
+
+# Deploys the API to Azure Container Apps on every push to main (that is,
+# on merge). Logs in to Azure with GitHub's OIDC token, exchanged for the
+# user-assigned identity created by infra/main.bicep. No client secret is
+# stored anywhere.
+#
+# Needs these repository *variables* (Settings > Secrets and variables >
+# Actions > Variables). They are identifiers, not secrets:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID,
+#   AZURE_RESOURCE_GROUP, AZURE_ACR_NAME, AZURE_CONTAINERAPP_NAME
+# scripts/deploy_infra.sh prints the exact `gh variable set` commands.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # request the OIDC token
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: vars.AZURE_CLIENT_ID != ''
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure CLI extensions
+        run: az extension add --name containerapp --upgrade --only-show-errors
+
+      - name: Build and push image to ACR
+        run: |
+          az acr login --name "${{ vars.AZURE_ACR_NAME }}"
+          LOGIN_SERVER=$(az acr show --name "${{ vars.AZURE_ACR_NAME }}" --query loginServer -o tsv)
+          IMAGE="$LOGIN_SERVER/finadv-api:$IMAGE_TAG"
+          docker build -t "$IMAGE" backend
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Update container app
+        run: |
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_CONTAINERAPP_NAME }}" \
+            --image "$IMAGE"
+          # The first deploy replaces the placeholder image, which listens on 80
+          az containerapp ingress update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_CONTAINERAPP_NAME }}" \
+            --target-port 8000
+
+      - name: Smoke test /health
+        run: |
+          FQDN=$(az containerapp show \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_CONTAINERAPP_NAME }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          # Scale from zero plus model loading can take a few minutes
+          for i in $(seq 1 30); do
+            if curl -fsS "https://$FQDN/health"; then echo; exit 0; fi
+            echo "waiting for the app ($i/30)"; sleep 20
+          done
+          echo "app did not become healthy"; exit 1

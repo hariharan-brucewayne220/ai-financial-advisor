@@ -1,0 +1,39 @@
+name: image
+
+# Builds the API image (no push) when anything that shapes it changes, so a
+# broken Dockerfile or dependency set shows up before it reaches main.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - backend/Dockerfile
+      - backend/.dockerignore
+      - backend/requirements*.txt
+      - .github/workflows/image.yml
+  pull_request:
+    paths:
+      - backend/Dockerfile
+      - backend/.dockerignore
+      - backend/requirements*.txt
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t finadv-api:ci backend
+
+      - name: Image size
+        run: docker image ls finadv-api:ci --format '{{.Size}}'
+
+      - name: Smoke test (imports and NLI model present)
+        run: |
+          docker run --rm \
+            -e SECRET_KEY=x -e DATABASE_URL=postgresql+asyncpg://u:p@localhost/db -e OPENAI_API_KEY=sk-none \
+            -e HF_HUB_OFFLINE=1 \
+            finadv-api:ci python -c "import app.main; from app.services.faithfulness_scorer import _load_nli_pipeline; _load_nli_pipeline(); print('ok')"

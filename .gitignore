@@ -70,3 +70,4 @@ test_integration.sh
 
 # Eval: embedding caches are large and reproducible; run outputs are kept
 backend/eval/out/embeddings-*.json
+infra/.outputs.json
