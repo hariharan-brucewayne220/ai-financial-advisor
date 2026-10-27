@@ -13,11 +13,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.dependencies import get_db, async_session_maker, verify_client_ownership
-from app.models.document import Document
+from app.models.document import Document, DocumentChunk
 from app.models.client import Client
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
@@ -245,6 +247,13 @@ async def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         )
+
+    if settings.retrieval_backend == "azure_search":
+        from app.services.azure_search import get_search_index
+        chunk_ids = (await db.execute(
+            select(DocumentChunk.id).where(DocumentChunk.document_id == document.id)
+        )).scalars().all()
+        await get_search_index().delete_chunks([str(i) for i in chunk_ids])
 
     # Delete from database (cascades to chunks via foreign key)
     await db.delete(document)

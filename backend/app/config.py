@@ -151,6 +151,18 @@ class Settings(BaseSettings):
     # BM25 sparse retrieval
     bm25_k: int = Field(default=20, description="Top-k for BM25 retrieval")
 
+    # Which store answers queries: "pgvector" (default: pgvector dense + local
+    # BM25, fused with RRF) or "azure_search" (Azure AI Search hybrid query).
+    retrieval_backend: Literal["pgvector", "azure_search"] = Field(
+        default="pgvector", alias="RETRIEVAL_BACKEND"
+    )
+    # Azure AI Search (used when RETRIEVAL_BACKEND=azure_search)
+    azure_search_endpoint: str | None = Field(default=None, alias="AZURE_SEARCH_ENDPOINT")
+    azure_search_index: str = Field(default="financial-chunks", alias="AZURE_SEARCH_INDEX")
+    # Optional. When unset, Microsoft Entra ID (managed identity / az login) is used.
+    azure_search_api_key: str | None = Field(default=None, alias="AZURE_SEARCH_API_KEY")
+    azure_search_api_version: str = Field(default="2024-07-01", alias="AZURE_SEARCH_API_VERSION")
+
     # Reranking
     reranker_model: str = Field(
         default="cross-encoder/ms-marco-MiniLM-L-6-v2",
@@ -283,6 +295,10 @@ class Settings(BaseSettings):
         if self.model_provider == "azure_openai" and not self.azure_openai_endpoint:
             raise ValueError(
                 "AZURE_OPENAI_ENDPOINT is required when MODEL_PROVIDER=azure_openai"
+            )
+        if self.retrieval_backend == "azure_search" and not self.azure_search_endpoint:
+            raise ValueError(
+                "AZURE_SEARCH_ENDPOINT is required when RETRIEVAL_BACKEND=azure_search"
             )
         return self
 

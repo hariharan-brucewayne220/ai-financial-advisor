@@ -13,6 +13,7 @@ This approach achieves higher recall (HyDE + hybrid) and precision (reranking + 
 """
 
 import asyncio
+import json
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 import logging
@@ -105,17 +106,23 @@ class HybridRetriever:
         # Step 2: Generate embedding for query (or HyDE answer)
         query_embedding = await self._embed_text(query_text)
 
-        # Step 3: Dense retrieval from pgvector
-        dense_results = await self._dense_search(client_id, query_embedding)
-        logger.info(f"Dense search returned {len(dense_results)} results")
+        if self.settings.retrieval_backend == "azure_search":
+            # Steps 3-5 in one call: Azure AI Search runs BM25 + vector and
+            # fuses them with RRF on the service side
+            fused_results = await self._azure_search(client_id, query, query_embedding)
+            logger.info(f"Azure AI Search hybrid query returned {len(fused_results)} results")
+        else:
+            # Step 3: Dense retrieval from pgvector
+            dense_results = await self._dense_search(client_id, query_embedding)
+            logger.info(f"Dense search returned {len(dense_results)} results")
 
-        # Step 4: Sparse retrieval via BM25
-        sparse_results = await self._sparse_search(client_id, query)
-        logger.info(f"Sparse search returned {len(sparse_results)} results")
+            # Step 4: Sparse retrieval via BM25
+            sparse_results = await self._sparse_search(client_id, query)
+            logger.info(f"Sparse search returned {len(sparse_results)} results")
 
-        # Step 5: Reciprocal Rank Fusion to combine
-        fused_results = self._reciprocal_rank_fusion(dense_results, sparse_results)
-        logger.info(f"RRF fusion produced {len(fused_results)} deduplicated results")
+            # Step 5: Reciprocal Rank Fusion to combine
+            fused_results = self._reciprocal_rank_fusion(dense_results, sparse_results)
+            logger.info(f"RRF fusion produced {len(fused_results)} deduplicated results")
 
         # Step 6: Rerank top-20 with cross-encoder to get top-5
         reranked = await self._rerank_results(query, fused_results, top_k=top_k)
@@ -167,6 +174,41 @@ Write only the document snippet, no preamble. Make it 2-3 sentences."""
             model=self.settings.embedding_model,
         )
         return response.data[0].embedding
+
+    async def _azure_search(
+        self,
+        client_id: str,
+        query: str,
+        query_embedding: List[float] | None,
+        limit: int = 20,
+        mode: str = "hybrid",
+    ) -> List[RetrievedChunk]:
+        """
+        Retrieval via Azure AI Search (RETRIEVAL_BACKEND=azure_search).
+
+        Keyword half uses the raw query, vector half uses the (HyDE) query
+        embedding, mirroring how the pgvector path splits them.
+        """
+        from app.services.azure_search import get_search_index
+
+        hits = await get_search_index().search(
+            client_id=client_id,
+            query_text=query,
+            query_vector=query_embedding,
+            top=limit,
+            mode=mode,
+        )
+        return [
+            RetrievedChunk(
+                chunk_id=hit["id"],
+                document_id=hit["document_id"],
+                content=hit["content"],
+                score=float(hit["@search.score"]),
+                retrieval_method=f"azure_{mode}",
+                metadata=json.loads(hit.get("metadata") or "{}"),
+            )
+            for hit in hits
+        ]
 
     async def _dense_search(
         self, client_id: str, query_embedding: List[float], limit: int = 20

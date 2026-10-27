@@ -13,7 +13,7 @@ Complete flow:
 import logging
 import asyncio
 from typing import List, Tuple
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -199,9 +199,11 @@ class DocumentIngestionPipeline:
         client_id: UUID,
         chunks_with_embeddings: List[dict],
     ) -> None:
-        """Store chunks and embeddings in pgvector."""
+        """Store chunks and embeddings in pgvector (and Azure AI Search if enabled)."""
+        rows = []
         for chunk_data in chunks_with_embeddings:
             chunk = DocumentChunk(
+                id=uuid4(),
                 document_id=document_id,
                 chunk_index=chunk_data.get("chunk_index", 0),
                 content=chunk_data["content"],
@@ -210,8 +212,23 @@ class DocumentIngestionPipeline:
                 chunk_metadata=chunk_data.get("metadata", {}),
             )
             self.db.add(chunk)
+            rows.append({
+                "id": chunk.id,
+                "client_id": client_id,
+                "document_id": document_id,
+                "chunk_index": chunk.chunk_index,
+                "content": chunk.content,
+                "metadata": chunk.chunk_metadata,
+                "embedding": chunk_data.get("embedding", []),
+            })
 
         await self.db.commit()
+
+        # Postgres stays the system of record; the search index is a copy
+        if settings.retrieval_backend == "azure_search":
+            from app.services.azure_search import get_search_index
+            uploaded = await get_search_index().upload_chunks(rows)
+            logger.info(f"  ✓ Pushed {uploaded} chunks to Azure AI Search")
 
     async def _update_document_status(
         self,
