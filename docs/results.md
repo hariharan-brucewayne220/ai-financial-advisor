@@ -124,3 +124,17 @@ distributions from your Roth".
 
 This is a baseline only. The pgvector, hybrid and Azure AI Search columns
 need embeddings and will be added from real runs (sections below).
+
+## 4. NLI model load time, per request vs cached
+
+The QA agent is built per request, and it used to build a new NLI pipeline
+each time. Measured on the same container with the weights already in the
+local Hugging Face cache:
+
+```
+uncached pipeline load #1: 1.36s, #2: 0.71s | FaithfulnessScorer() first: 0.71s, second: 0.00ms
+```
+
+Script: time `transformers.pipeline("text-classification", model="facebook/bart-large-mnli")`
+twice, then `FaithfulnessScorer()` twice after the change (model now loaded
+once per process via `functools.lru_cache`).

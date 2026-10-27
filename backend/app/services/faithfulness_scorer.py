@@ -17,6 +17,7 @@ This gives us a 0.0-1.0 faithfulness score per answer.
 import asyncio
 import logging
 import re
+from functools import lru_cache
 from typing import Callable, List, Tuple
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,21 @@ WINDOW_STRIDE = 250
 _CITATION_RE = re.compile(r"\((?:Document|Source|Live Market Data)[^)]*\)", re.IGNORECASE)
 
 
+@lru_cache(maxsize=1)
+def _load_nli_pipeline():
+    """
+    Load the NLI model once per process.
+
+    The QA agent (and so this scorer) is created per request; reloading the
+    model each time cost about 0.7 s per answer even with the weights on
+    local disk (see docs/results.md).
+    """
+    from transformers import pipeline
+    # Plain NLI: premise = context, hypothesis = answer sentence,
+    # output = probabilities for contradiction / neutral / entailment
+    return pipeline("text-classification", model=NLI_MODEL)
+
+
 class FaithfulnessScorer:
     """Score faithfulness of generated answers against retrieved context."""
 
@@ -46,10 +62,7 @@ class FaithfulnessScorer:
             self.classifier = classifier
             return
         try:
-            from transformers import pipeline
-            # Plain NLI: premise = context, hypothesis = answer sentence,
-            # output = probabilities for contradiction / neutral / entailment
-            self.classifier = pipeline("text-classification", model=NLI_MODEL)
+            self.classifier = _load_nli_pipeline()
         except ImportError:
             logger.warning("transformers not installed. NLI scoring disabled. pip install transformers")
             self.classifier = None

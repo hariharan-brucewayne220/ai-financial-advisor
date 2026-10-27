@@ -104,3 +104,22 @@ async def test_real_model_separates_supported_from_unsupported(real_scorer):
     assert supported > 0.8
     assert contradicted < 0.2
     assert unrelated < 0.2
+
+
+def test_nli_model_loads_once_per_process(monkeypatch):
+    import sys
+    import types
+
+    from app.services import faithfulness_scorer as fs
+
+    loads = []
+    fake_transformers = types.ModuleType("transformers")
+    fake_transformers.pipeline = lambda task, model: loads.append((task, model)) or object()
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
+    fs._load_nli_pipeline.cache_clear()
+    try:
+        a, b = FaithfulnessScorer(), FaithfulnessScorer()
+        assert a.classifier is b.classifier
+        assert loads == [("text-classification", "facebook/bart-large-mnli")]
+    finally:
+        fs._load_nli_pipeline.cache_clear()
