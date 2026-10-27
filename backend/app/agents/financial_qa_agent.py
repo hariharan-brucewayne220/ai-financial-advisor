@@ -577,9 +577,14 @@ Answer with sources cited:"""
 
             logger.info(f"Faithfulness score: {score:.3f}, retry: {should_retry}")
 
+            # Count the retry here: conditional-edge functions (_should_retry)
+            # cannot write state, so without this the loop never ends.
+            retry_count = state.get("retry_count", 0) + (1 if should_retry else 0)
+
             return {
                 "faithfulness_score": score,
                 "should_retry": should_retry,
+                "retry_count": retry_count,
                 "retry_reason": "Low faithfulness score" if should_retry else None,
             }
 
@@ -616,8 +621,7 @@ Answer with sources cited:"""
         Returns "retrieve" to loop back, "format" to proceed.
         """
         if state.get("should_retry"):
-            retry_count = state.get("retry_count", 0) + 1
-            logger.info(f"Retrying retrieval (attempt {retry_count})")
+            logger.info(f"Retrying retrieval (attempt {state.get('retry_count', 0)})")
             return "retrieve"
         return "format"
 
