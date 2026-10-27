@@ -33,10 +33,10 @@ import json
 from datetime import datetime
 
 from langgraph.graph import StateGraph, END
-from openai import AsyncOpenAI
 
 from app.agents.state import ReportGenerationState
 from app.config import get_settings
+from app.llm import get_llm_client
 from app.services.retriever import HybridRetriever
 from app.models.client import Client
 from app.models.report import Report
@@ -57,7 +57,7 @@ class ReportWriterAgent:
         """Initialize agent with dependencies."""
         self.db = db_session
         self.retriever = retriever
-        self.openai = AsyncOpenAI(api_key=settings.openai_api_key)
+        self.openai = get_llm_client()
         self.settings = settings
 
         # Build LangGraph workflow
@@ -273,7 +273,7 @@ If data is missing or unclear, explicitly state: "Information not found in docum
 """
 
         response = await self.openai.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[
                 {
                     "role": "system",
@@ -377,7 +377,7 @@ Use professional tone. Include specific numbers from the data provided.
 Do NOT make up data - only use what's provided."""
 
         response = await self.openai.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[
                 {
                     "role": "system",
@@ -441,7 +441,7 @@ Format response as JSON:
 }}"""
 
         response = await self.openai.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[
                 {
                     "role": "system",
@@ -524,7 +524,7 @@ Generate a revised version that:
 Output ONLY the revised Markdown report, no explanations."""
 
         response = await self.openai.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[
                 {
                     "role": "system",

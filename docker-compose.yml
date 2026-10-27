@@ -84,7 +84,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT_URL: http://localstack:4566
       AWS_REGION: us-east-1
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?error}
+      # Optional when MODEL_PROVIDER=azure_openai; the app checks it at startup otherwise
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SECRET_KEY: dev-secret-key-change-in-production
       FASTAPI_ENV: development
       FASTAPI_DEBUG: "true"

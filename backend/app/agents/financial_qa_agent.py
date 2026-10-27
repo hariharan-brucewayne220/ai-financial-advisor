@@ -25,10 +25,10 @@ from typing import List, Optional
 import asyncio
 
 from langgraph.graph import StateGraph, END
-from openai import AsyncOpenAI
 
 from app.agents.state import AgentState
 from app.config import get_settings
+from app.llm import get_llm_client
 from app.services.retriever import HybridRetriever, RetrievedChunk
 from app.services.faithfulness_scorer import FaithfulnessScorer
 from app.services.market_data import MarketDataService
@@ -52,7 +52,7 @@ class FinancialQAAgent:
         self.retriever = HybridRetriever(db_session)
         self.faithfulness_scorer = FaithfulnessScorer()
         self.market_data = MarketDataService()
-        self.openai = AsyncOpenAI(api_key=settings.openai_api_key)
+        self.openai = get_llm_client()
         self.settings = settings
 
         # Build LangGraph workflow
@@ -136,7 +136,7 @@ class FinancialQAAgent:
 
         # Use GPT-4o for classification
         response = await self.openai.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[
                 {
                     "role": "system",
@@ -485,7 +485,7 @@ Please try asking another question or upload relevant documents first."""
             return {
                 "generated_response": error_msg,
                 "generation_metadata": {
-                    "model": self.settings.openai_chat_model,
+                    "model": self.settings.chat_model,
                     "input_tokens": 0,
                     "output_tokens": 0,
                     "sources_grounded": False,
@@ -524,7 +524,7 @@ Question: {query}
 Answer with sources cited:"""
 
         response = await self.openai.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 *history,
@@ -544,7 +544,7 @@ Answer with sources cited:"""
         return {
             "generated_response": generated_response,
             "generation_metadata": {
-                "model": self.settings.openai_chat_model,
+                "model": self.settings.chat_model,
                 "input_tokens": response.usage.prompt_tokens,
                 "output_tokens": response.usage.completion_tokens,
                 "sources_grounded": sources_grounded,

@@ -23,9 +23,10 @@ import logging
 from typing import List
 import tiktoken
 
-from openai import AsyncOpenAI, RateLimitError, APIError
+from openai import RateLimitError, APIError
 
 from app.config import get_settings
+from app.llm import get_llm_client
 
 
 logger = logging.getLogger(__name__)
@@ -36,9 +37,9 @@ class EmbedderService:
     """Embed text using OpenAI API with batching and retry logic."""
 
     def __init__(self):
-        """Initialize embedder with OpenAI client."""
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self.model = settings.openai_embedding_model
+        """Initialize embedder with the configured provider's client."""
+        self.client = get_llm_client()
+        self.model = settings.embedding_model
         self.batch_size = 100  # Max 100 texts per API call
         self.max_retries = 3
         self.retry_delay = 2  # Start with 2 second delay

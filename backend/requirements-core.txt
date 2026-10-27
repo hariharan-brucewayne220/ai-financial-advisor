@@ -19,7 +19,8 @@ psycopg2-binary>=2.9.9
 pgvector>=0.2.5
 
 # LLM & Orchestration
-openai>=1.10.0
+openai>=3.40,<4  # tested version; callable api_key (Entra token provider) needs a recent SDK
+azure-identity>=1.17.0  # Entra ID / managed identity auth for Azure OpenAI and AI Search
 langgraph>=0.0.20
 langchain>=0.1.10
 langchain-openai>=0.0.8

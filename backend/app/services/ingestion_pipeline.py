@@ -126,9 +126,9 @@ class DocumentIngestionPipeline:
         try:
             import base64
             from pathlib import Path
-            from openai import AsyncOpenAI
+            from app.llm import get_llm_client
 
-            client = AsyncOpenAI(api_key=settings.openai_api_key)
+            client = get_llm_client()
 
             # Read image
             image_data = Path(file_path).read_bytes()
@@ -148,7 +148,7 @@ class DocumentIngestionPipeline:
             # Use Vision-capable chat completion to extract structured data
             data_url = f"data:{image_format};base64,{base64_image}"
             response = await client.chat.completions.create(
-                model="gpt-4o",
+                model=settings.vision_model,
                 max_tokens=2000,
                 messages=[
                     {
@@ -165,9 +165,6 @@ class DocumentIngestionPipeline:
             logger.info(f"Vision API extracted {len(extracted_text)} chars from image")
             return extracted_text
 
-        except ImportError:
-            logger.error("OpenAI SDK not available for image processing")
-            raise
         except Exception as e:
             logger.error(f"Vision API failed: {e}")
             raise

@@ -5,7 +5,7 @@ All environment variables are typed and validated at startup.
 This ensures configuration errors are caught early.
 """
 
-from typing import List
+from typing import List, Literal
 from functools import lru_cache
 
 from pydantic import Field, validator, model_validator
@@ -42,15 +42,45 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = Field(default=3600)
 
     # ========================================================================
+    # MODEL PROVIDER
+    # ========================================================================
+    # "openai" (default) or "azure_openai". Switched only by environment
+    # variables; see app/llm.py for how the client is built.
+    model_provider: Literal["openai", "azure_openai"] = Field(
+        default="openai", alias="MODEL_PROVIDER"
+    )
+
+    # ========================================================================
     # OPENAI API
     # ========================================================================
-    openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_embedding_model: str = Field(
         default="text-embedding-3-small", alias="OPENAI_EMBEDDING_MODEL"
     )
     openai_chat_model: str = Field(default="gpt-4o", alias="OPENAI_CHAT_MODEL")
+    openai_vision_model: str = Field(default="gpt-4o", alias="OPENAI_VISION_MODEL")
     openai_batch_embedding: bool = Field(default=False, alias="OPENAI_BATCH_EMBEDDING")
     openai_embedding_dimension: int = 1536  # text-embedding-3-small output dimension
+
+    # ========================================================================
+    # AZURE OPENAI (used when MODEL_PROVIDER=azure_openai)
+    # ========================================================================
+    # Resource endpoint, e.g. https://my-resource.openai.azure.com
+    azure_openai_endpoint: str | None = Field(default=None, alias="AZURE_OPENAI_ENDPOINT")
+    # Optional. When unset, the app authenticates with Microsoft Entra ID
+    # (managed identity in Azure, az login locally) and no key is needed.
+    azure_openai_api_key: str | None = Field(default=None, alias="AZURE_OPENAI_API_KEY")
+    # Deployment names (what Azure calls the model in API calls)
+    azure_openai_chat_deployment: str = Field(
+        default="gpt-4o-mini", alias="AZURE_OPENAI_CHAT_DEPLOYMENT"
+    )
+    azure_openai_embedding_deployment: str = Field(
+        default="text-embedding-3-small", alias="AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+    )
+    azure_openai_token_scope: str = Field(
+        default="https://cognitiveservices.azure.com/.default",
+        alias="AZURE_OPENAI_TOKEN_SCOPE",
+    )
 
     # ========================================================================
     # ALPHA VANTAGE API
@@ -184,6 +214,27 @@ class Settings(BaseSettings):
         return self.fastapi_env == "production"
 
     @property
+    def chat_model(self) -> str:
+        """Model name (OpenAI) or deployment name (Azure) for chat calls."""
+        if self.model_provider == "azure_openai":
+            return self.azure_openai_chat_deployment
+        return self.openai_chat_model
+
+    @property
+    def embedding_model(self) -> str:
+        """Model name (OpenAI) or deployment name (Azure) for embeddings."""
+        if self.model_provider == "azure_openai":
+            return self.azure_openai_embedding_deployment
+        return self.openai_embedding_model
+
+    @property
+    def vision_model(self) -> str:
+        """Model used to read uploaded images. Azure reuses the chat deployment."""
+        if self.model_provider == "azure_openai":
+            return self.azure_openai_chat_deployment
+        return self.openai_vision_model
+
+    @property
     def cors_origins_list(self) -> List[str]:
         """Get CORS origins as list."""
         if isinstance(self.cors_origins, str):
@@ -223,6 +274,17 @@ class Settings(BaseSettings):
         if not 0.0 <= v <= 1.0:
             raise ValueError("faithfulness_threshold must be between 0.0 and 1.0")
         return v
+
+    @model_validator(mode="after")
+    def check_model_provider_settings(self):
+        """Fail at startup if the chosen provider is missing its settings."""
+        if self.model_provider == "openai" and not self.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required when MODEL_PROVIDER=openai")
+        if self.model_provider == "azure_openai" and not self.azure_openai_endpoint:
+            raise ValueError(
+                "AZURE_OPENAI_ENDPOINT is required when MODEL_PROVIDER=azure_openai"
+            )
+        return self
 
     @model_validator(mode="after")
     def set_alpha_vantage_mcp_url(self):

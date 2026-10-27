@@ -19,11 +19,11 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from openai import AsyncOpenAI, OpenAI
 from rank_bm25 import BM25Okapi
 import numpy as np
 
 from app.config import get_settings
+from app.llm import get_llm_client
 from app.models.document import DocumentChunk, Document
 from app.models.client import Client
 
@@ -65,8 +65,7 @@ class HybridRetriever:
         """Initialize retriever with database session."""
         self.db = db_session
         self.settings = settings
-        self.openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self.sync_openai = OpenAI(api_key=settings.openai_api_key)
+        self.openai_client = get_llm_client()
 
         # Cache for BM25 indexes per client
         # BM25Okapi is lightweight and can be kept in memory
@@ -149,7 +148,7 @@ class HybridRetriever:
 Write only the document snippet, no preamble. Make it 2-3 sentences."""
 
         response = await self.openai_client.chat.completions.create(
-            model=self.settings.openai_chat_model,
+            model=self.settings.chat_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=200,
@@ -165,7 +164,7 @@ Write only the document snippet, no preamble. Make it 2-3 sentences."""
         """
         response = await self.openai_client.embeddings.create(
             input=text,
-            model=self.settings.openai_embedding_model,
+            model=self.settings.embedding_model,
         )
         return response.data[0].embedding
 
