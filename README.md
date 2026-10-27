@@ -142,7 +142,7 @@ Prices checked on Azure's and OpenAI's pricing pages on 2026-10-27. Re-check bef
 | Postgres Flexible Server | Burstable B1ms, 32 GiB | $12.41 per month plus $0.115 per GiB-month storage | The main fixed cost, about $0.53 a day all in |
 | Container Registry | Basic | $0.167 per day | |
 | Azure AI Search | Free | $0 | 50 MB, 3 indexes, one per subscription; may be deleted after long inactivity |
-| Azure OpenAI | gpt-4o-mini Global | $0.15 in / $0.60 out per 1M tokens | Pay per token |
+| Azure OpenAI | gpt-4o-mini, Standard (regional) deployment | $0.165 in / $0.66 out per 1M tokens | Pay per token. Standard, not GlobalStandard: student subscriptions can have 0 GlobalStandard quota for this model |
 | Azure OpenAI | text-embedding-3-small | $0.022 per 1M tokens | Embedding this whole corpus is about 200K tokens |
 | Key Vault | Standard | per-operation pricing | Negligible at this volume |
 | Log Analytics | not deployed | | Use `az containerapp logs show --follow` |

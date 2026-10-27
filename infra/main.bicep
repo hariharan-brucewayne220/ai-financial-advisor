@@ -17,7 +17,7 @@
 
 targetScope = 'resourceGroup'
 
-@description('Azure region. Pick one where gpt-4o-mini (GlobalStandard) and text-embedding-3-small are offered.')
+@description('Azure region. Check quota first: az cognitiveservices usage list --location <region> -o table')
 param location string = resourceGroup().location
 
 @description('Short lowercase prefix for resource names.')
@@ -48,6 +48,10 @@ param retrievalBackend string = 'azure_search'
 
 @description('Tokens-per-minute capacity, in thousands, for each model deployment.')
 param chatCapacityK int = 10
+
+@description('Deployment SKU for gpt-4o-mini. Standard by default: some subscriptions (e.g. student) have 0 GlobalStandard quota for it.')
+@allowed(['Standard', 'GlobalStandard'])
+param chatSkuName string = 'Standard'
 param embeddingCapacityK int = 10
 
 @description('Deployment SKU for the embedding model. Some regions only offer Standard.')
@@ -281,7 +285,7 @@ resource chatDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-1
   parent: openAi
   name: 'gpt-4o-mini'
   sku: {
-    name: 'GlobalStandard'
+    name: chatSkuName
     capacity: chatCapacityK
   }
   properties: {
