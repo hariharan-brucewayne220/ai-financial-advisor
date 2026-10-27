@@ -1,37 +1,5 @@
-# ============================================================================
-# AI FINANCIAL ADVISOR - BACKEND DEPENDENCIES (MINIMAL)
-# ============================================================================
-
-# Core Framework
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-
-# Database & Vector Search
-sqlalchemy>=2.0.23
-asyncpg>=0.29.0
-alembic>=1.13.1
-psycopg2-binary>=2.9.9
-pgvector>=0.2.5
-
-# LLM & Orchestration
-openai>=1.10.0
-langgraph>=0.0.20
-langchain>=0.1.10
-langchain-openai>=0.0.8
-langchain-text-splitters>=0.0.1
-tiktoken>=0.5.2
-
-# Search & Ranking
-rank-bm25>=0.2.2
-numpy>=1.24.3
-
-# Text Processing
-pdfplumber>=0.10.3
-pandas>=2.1.3
-openpyxl>=3.1.2
+# Full backend dependencies: core + ML models (PII detection, NLI faithfulness).
+-r requirements-core.txt
 
 # PII Detection (services/pii_detector.py)
 # AnalyzerEngine() loads the spaCy "en_core_web_lg" model by default; the model
@@ -46,18 +14,3 @@ en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_
 # The facebook/bart-large-mnli weights (~1.6 GB) are downloaded from the HF hub on first use.
 transformers>=4.36.0
 torch>=2.1.0
-
-# Infrastructure
-redis>=5.0.1
-arq>=0.25.0
-boto3>=1.29.7
-aiohttp>=3.9.0
-
-# Security & Auth
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-python-dotenv>=1.0.0
-
-# Utilities
-requests>=2.31.0
-packaging>=24.0
