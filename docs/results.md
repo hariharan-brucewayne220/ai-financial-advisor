@@ -138,3 +138,26 @@ uncached pipeline load #1: 1.36s, #2: 0.71s | FaithfulnessScorer() first: 0.71s,
 Script: time `transformers.pipeline("text-classification", model="facebook/bart-large-mnli")`
 twice, then `FaithfulnessScorer()` twice after the change (model now loaded
 once per process via `functools.lru_cache`).
+
+## 5. Dense query and the HNSW index
+
+`HybridRetriever._dense_search` orders by `l2_distance` (`<->`), but the
+HNSW index is built with `vector_cosine_ops`. With 244 rows the planner
+picks a sequential scan either way, so this forces the question:
+
+```bash
+psql ... -c "SET enable_seqscan = off; EXPLAIN SELECT id FROM document_chunks ORDER BY embedding <-> '[...]' LIMIT 20;"
+psql ... -c "SET enable_seqscan = off; EXPLAIN SELECT id FROM document_chunks ORDER BY embedding <=> '[...]' LIMIT 20;"
+```
+
+```
+op <->:
+        ->  Seq Scan on document_chunks  (cost=10000000000.00..10000000065.05 rows=244 width=24)
+op <=>:
+  ->  Index Scan using idx_document_chunks_embedding on document_chunks  (cost=192.36..443.41 rows=244 width=24)
+```
+
+The L2 query cannot use the cosine index. Not changed on this branch:
+OpenAI embeddings are unit length, so L2 and cosine give the same ranking,
+and switching to the approximate index changes results, which should be
+measured with the eval first. Listed under Known limitations in the README.

@@ -1,303 +1,190 @@
 # AI Financial Advisor
 
-A production-grade RAG (Retrieval-Augmented Generation) platform for financial advisors. Upload client documents, ask questions about their portfolios, and generate grounded financial reports — all powered by hybrid search, LangGraph agents, and real-time streaming.
+A RAG app for financial advisors. Upload client documents, ask questions over them in a streaming chat, and generate reports grounded in those documents. FastAPI and LangGraph on the backend, React and TypeScript on the frontend, Server-Sent Events for streaming.
 
----
+The same code runs two ways, switched only by environment variables:
 
-## Features
+| | Local (default) | Azure |
+|---|---|---|
+| Models | OpenAI (`gpt-4o`, `text-embedding-3-small`) | Azure OpenAI (`gpt-4o-mini`, `text-embedding-3-small`), Entra ID auth, keys disabled |
+| Retrieval | pgvector dense + BM25, fused with RRF | Azure AI Search hybrid query (BM25 + vector, RRF on the service) or the same pgvector path |
+| Secrets | `.env` | Key Vault, read by a managed identity |
+| Hosting | Docker Compose | Azure Container Apps, consumption plan, scales to zero |
 
-- **Streaming Q&A** — Ask questions about client portfolios and receive streamed answers grounded in uploaded documents via Server-Sent Events (SSE)
-- **Document Upload & Processing** — Upload PDFs, CSVs, and Excel files; documents are chunked, PII-redacted, and indexed automatically
-- **Hybrid Retrieval** — Combines dense vector search (pgvector + OpenAI embeddings) with BM25 sparse search, fused via Reciprocal Rank Fusion (RRF)
-- **Report Generation** — LangGraph agent generates structured financial reports backed by real client data — hard-fails if no documents are indexed
-- **Market Data Integration** — Fetches live market data via Alpha Vantage and surfaces availability status explicitly in every response
-- **JWT Authentication** — Cryptographic token validation with advisor-client ownership enforcement on every endpoint
-- **Audit Trail** — Append-only audit logs with data source provenance, market data timestamps, and PII redaction tracking
-- **Multi-Tenancy** — Client data is isolated per advisor; UUID-guessing attacks are blocked at the ownership layer
+## What it does
 
----
+- **Streaming Q&A.** Questions go through a LangGraph agent (classify, retrieve, rerank, compress, market data, generate, score) and stream back over SSE with source chunk ids.
+- **Document ingestion.** PDF, CSV, Excel and images are parsed, PII-redacted with Presidio, chunked, embedded and indexed.
+- **Hybrid retrieval.** pgvector (HNSW) plus BM25 fused with Reciprocal Rank Fusion, optional HyDE query expansion. Or Azure AI Search with `RETRIEVAL_BACKEND=azure_search`.
+- **Faithfulness score.** Each answer sentence is checked against the retrieved context with an NLI model (`facebook/bart-large-mnli`); low scores trigger up to two retrieval retries.
+- **Reports, market data, multi-tenancy.** Report generation that refuses to run without indexed documents, Alpha Vantage quotes, JWT auth with advisor-client ownership checks, append-only audit log.
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Nginx (port 80)                         │
-└────────────────┬───────────────────────────┬────────────────────┘
-                 │                           │
-        ┌────────▼────────┐        ┌─────────▼────────┐
-        │  React + Vite   │        │   FastAPI (8000)  │
-        │   (port 5173)   │        │   LangGraph Agent │
-        └─────────────────┘        └────────┬─────────┘
-                                            │
-              ┌─────────────────────────────┼───────────────────┐
-              │                             │                   │
-     ┌────────▼──────┐          ┌───────────▼──────┐   ┌───────▼──────┐
-     │  PostgreSQL   │          │      Redis        │   │  LocalStack  │
-     │  + pgvector   │          │  (cache + queue)  │   │  (S3 / dev)  │
-     └───────────────┘          └──────────────────┘   └──────────────┘
-```
+```mermaid
+flowchart LR
+    user([Advisor]) --> fe[React + TypeScript<br/>chat over SSE]
+    fe --> api
 
-**Retrieval pipeline:**
+    subgraph aca[Azure Container Apps, consumption, 0 to 1 replica]
+        api[FastAPI + LangGraph agent]
+    end
 
-```
-Document → PII Redaction → Chunking → Embedding → pgvector (HNSW)
-                                                         │
-Query ──────────────────────────────────────── BM25 + Dense Search
-                                                         │
-                                              RRF Fusion → Rerank* → Compress*
-                                                         │
-                                              LangGraph Agent → SSE Stream
+    api -->|chat + embeddings<br/>Entra ID| llm{MODEL_PROVIDER}
+    llm -->|openai| oai[OpenAI API]
+    llm -->|azure_openai| aoai[Azure OpenAI<br/>gpt-4o-mini<br/>text-embedding-3-small]
+
+    api -->|RETRIEVAL_BACKEND| ret{retrieval}
+    ret -->|pgvector| pg[(Postgres Flexible<br/>+ pgvector<br/>+ in-memory BM25, RRF)]
+    ret -->|azure_search| ais[Azure AI Search Free<br/>hybrid BM25 + HNSW]
+
+    api -->|system of record| pg
+    api -->|NLI faithfulness| nli[bart-large-mnli<br/>in the container]
+
+    kv[Key Vault<br/>SECRET-KEY, DATABASE-URL] -->|managed identity| api
+    acr[Container Registry] -->|managed identity pull| api
+
+    gh[GitHub Actions] -->|OIDC, no stored secret| acr
+    gh -->|az containerapp update| api
 ```
 
-\* The `rerank` and `compress` graph nodes are currently **pass-through placeholders**
-(see [Known Limitations](#known-limitations)).
+Postgres stays the system of record in both modes. With `azure_search`, ingestion also upserts each chunk (text + vector) into one search index, and document deletes remove them.
 
----
+## Run it locally
 
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Zustand |
-| Backend | FastAPI, Python 3.11, SQLAlchemy (async), Alembic |
-| LLM & Agents | OpenAI GPT-4o, LangGraph, LangChain |
-| Vector Search | PostgreSQL 16 + pgvector (HNSW index) |
-| Sparse Search | BM25Okapi (rank-bm25) |
-| Task Queue | ARQ (async Redis queue) |
-| Auth | python-jose (JWT), passlib (bcrypt) |
-| Infrastructure | Docker Compose, Nginx, LocalStack (AWS S3 emulation) |
-| Observability | Append-only audit logs, market data timestamps |
-
----
-
-## Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2
-- OpenAI API key
-- Alpha Vantage API key (optional, for live market data)
-
----
-
-## Quick Start
-
-### 1. Clone the repository
+Needs Docker and an OpenAI API key.
 
 ```bash
 git clone https://github.com/hariharan-brucewayne220/ai-financial-advisor.git
 cd ai-financial-advisor
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and set the required values:
-
-```env
-# Required
-OPENAI_API_KEY=sk-...
-SECRET_KEY=your-secret-key-min-32-chars
-
-# Database (defaults work with Docker Compose)
-DATABASE_URL=postgresql+asyncpg://advisor:advisor_password@postgres:5432/financial_advisor_db
-REDIS_URL=redis://redis:6379
-
-# Optional — live market data
-ALPHA_VANTAGE_API_KEY=your-key
-```
-
-### 3. Start the stack
-
-```bash
+cp .env.example .env        # set OPENAI_API_KEY and SECRET_KEY
 docker compose up --build
 ```
 
-This starts 6 services: PostgreSQL, Redis, LocalStack, backend, frontend, and Nginx.
-
 | Service | URL |
 |---|---|
-| Frontend UI | http://localhost |
-| Backend API | http://localhost/api |
-| API Docs (Swagger) | http://localhost/api/docs |
-| Frontend (direct) | http://localhost:5173 |
-| Backend (direct) | http://localhost:8000 |
+| Frontend | http://localhost |
+| API docs (Swagger) | http://localhost/api/docs |
+| Backend direct | http://localhost:8000 |
 
-### 4. Initialize the database
+On startup the API creates the `vector` extension and any missing tables. Docker Compose also runs `scripts/init_db.sql`.
 
-The database schema is applied automatically on first startup via Alembic migrations. No manual step required.
+### Switching provider and retrieval backend
 
----
+```bash
+# Azure OpenAI with your az login (no key needed)
+MODEL_PROVIDER=azure_openai
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
+AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4o-mini
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-small
 
-## API Overview
-
-### Authentication
-
-All endpoints require a JWT bearer token:
-
-```
-Authorization: Bearer <token>
+# Azure AI Search instead of pgvector + BM25
+RETRIEVAL_BACKEND=azure_search
+AZURE_SEARCH_ENDPOINT=https://<service>.search.windows.net
 ```
 
-### Core Endpoints
+`AZURE_OPENAI_API_KEY` and `AZURE_SEARCH_API_KEY` exist for local experiments but are optional. Without them the app uses `DefaultAzureCredential`, which is the managed identity in Azure and `az login` on a laptop. The Bicep template disables key auth on both services.
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/auth/register` | Register an advisor, returns JWT tokens |
-| `POST` | `/api/auth/login` | Obtain JWT tokens |
-| `POST` | `/api/clients` | Create a client |
-| `GET` | `/api/clients` | List advisor's clients |
-| `POST` | `/api/documents/{client_id}/upload` | Upload a document for a client |
-| `GET` | `/api/documents/{client_id}` | List client documents |
-| `GET` | `/api/documents/{client_id}/{document_id}/status` | Poll ingestion status |
-| `POST` | `/api/conversations/{client_id}/conversations` | Create a conversation |
-| `GET` | `/api/conversations/{client_id}/conversations/{conv_id}/messages?query=...` | Stream Q&A response (SSE; `token` may be passed as a query param for `EventSource`) |
-| `POST` | `/api/reports/{client_id}/generate?report_type=portfolio_summary` | Generate a grounded financial report |
-| `GET` | `/api/reports/{client_id}/{report_id}` | Fetch a generated report |
+### Tests
 
-### SSE Stream Events
-
-The Q&A stream emits the following event types in order:
-
-```
-event: step         # agent node in progress (classify, retrieve, rerank, ...)
-event: token        # partial response text
-event: sources      # retrieved document chunk ids
-event: faithfulness # NLI faithfulness score for the answer
-event: done         # stream complete
-event: error        # terminal error (stream closes)
-```
-
----
-
-## Project Structure
-
-```
-ai-financial-advisor/
-├── backend/
-│   ├── app/
-│   │   ├── agents/          # LangGraph agents (QA, report writer)
-│   │   ├── api/             # FastAPI routers
-│   │   ├── auth.py          # JWT encode/decode/validate
-│   │   ├── models/          # SQLAlchemy ORM models
-│   │   ├── schemas/         # Pydantic request/response schemas
-│   │   ├── services/        # RAG services (retriever, embedder, chunker)
-│   │   └── workers/         # ARQ background task workers
-│   ├── alembic/             # Database migrations
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── hooks/           # Custom hooks (useChat)
-│   │   └── lib/             # API client (api.ts) and JWT helpers (auth.ts)
-│   └── package.json
-├── infrastructure/
-│   └── nginx/               # Nginx reverse-proxy config used by docker-compose
-├── docker-compose.yml
-├── postgres.Dockerfile      # PostgreSQL + pgvector image
-├── scripts/                 # init_db.sql schema, seed_data.py
-└── .env.example
-```
-
----
-
-## Development
-
-### Running services individually
-
-**Backend (hot reload):**
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+pip install -r requirements-core.txt -r requirements-test.txt
+python -m pytest
 ```
 
-**Frontend (hot reload):**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+`requirements-core.txt` skips the multi-GB ML packages, so the NLI test that needs the real model is skipped unless `transformers` is installed. The schema test runs when `TEST_DATABASE_URL` points at a throwaway pgvector database. GitHub Actions runs all of it on every push, with a pgvector service container, and also compiles the Bicep, shellchecks the scripts and builds the Docker image when its inputs change.
 
-### Database migrations
+The Azure paths are tested against in-process mock endpoints: the tests check the exact URL, auth header, request body and model or deployment name sent to Azure OpenAI and Azure AI Search.
 
-```bash
-# Inside the backend container or with DATABASE_URL set
-alembic upgrade head
+## Eval
 
-# Create a new migration
-alembic revision --autogenerate -m "description"
-```
-
-### Verifying a change
-
-There is **no automated test suite** in this repository yet (no `pytest` tests and no
-integration script). Until one exists, the checks are:
+42 questions over IRS Publication 590-A and 590-B (2025), public domain, in `backend/eval/`. Each question carries an evidence span copied from the parsed text; a chunk counts as relevant if it contains the span. Corpus: 2 PDFs, 133 pages, 3.9 MB, which the app's own chunker turns into 244 chunks and 200,227 tokens. Well inside the Search Free tier's 50 MB.
 
 ```bash
-# Frontend type-check + production build
-cd frontend && npm ci && npm run build
-
-# Backend: byte-compile everything to catch syntax/import-path errors
-cd backend && python -m compileall app
-
-# End-to-end: bring the stack up and exercise it through Swagger
-docker compose up --build   # then open http://localhost/api/docs
+cd backend
+python -m eval.run_eval ingest [--azure-search]        # parse, chunk, embed, store
+python -m eval.run_eval run --backends bm25,pgvector,hybrid,azure_search --answer
 ```
 
----
+Every number below comes from a real run. Commands, environment and raw output for each are in [docs/results.md](docs/results.md), and the per-question rows are in `backend/eval/out/`.
 
-## Security Notes
+| Backend | recall@5 | hit@5 | MRR@5 | Faithfulness (NLI) | p50 / p95 latency | Cost per 100 questions |
+|---|---|---|---|---|---|---|
+| BM25 only (baseline) | 0.714 | 0.738 | 0.565 | n/a | 50 / 69 ms (retrieval) | $0 |
+| pgvector (dense) | not run yet | | | | | |
+| Hybrid (pgvector + BM25, RRF) | not run yet | | | | | |
+| Azure AI Search (hybrid) | not run yet | | | | | |
 
-- JWT tokens are validated cryptographically on every request
-- Advisor-client ownership is verified before any data access
-- PII is redacted via [Presidio](https://microsoft.github.io/presidio/) before document indexing (requires `presidio-analyzer` and the spaCy `en_core_web_lg` model from `requirements.txt`; if the import fails the detector logs a warning and disables itself)
-- Market data availability is always explicit — responses never silently omit data
-- Reports hard-fail if the client has no indexed documents (no hallucination)
-- All Q&A responses include source citations and faithfulness scores
+The pgvector, hybrid and Azure AI Search rows need an embeddings API, which costs money, so they wait for an OpenAI key or the Azure resources. Definitions: recall@5 is the share of a question's relevant chunks in the top 5, hit@5 the share of questions with any relevant chunk in the top 5, and cost uses API-reported token counts times the prices in `backend/eval/prices.json`.
 
----
+## Deploy to Azure
 
-## Known Limitations
+Infra lives in `infra/main.bicep`. The app runs as a user-assigned managed identity that pulls from ACR, reads `SECRET-KEY` and `DATABASE-URL` from Key Vault, and calls Azure OpenAI and AI Search with Entra ID. GitHub Actions logs in through an OIDC federated credential on a second identity that can only push images and update the container app. No keys or client secrets are stored in code, env files or GitHub.
 
-This is a working MVP; the following parts of the pipeline are not yet what the
-docstrings describe:
+```bash
+az login
+RG=finadv-rg LOCATION=eastus2 ./scripts/deploy_infra.sh   # creates billable resources
+# set the GitHub variables it prints, then merge to main: .github/workflows/deploy.yml deploys
+RG=finadv-rg ./scripts/teardown.sh                        # deletes everything and purges soft-deleted vault + OpenAI account
+```
 
-- **Rerank stage is a placeholder.** `FinancialQAAgent._rerank_documents` sorts the
-  RRF-fused candidates by their existing score and truncates to `reranker_top_k`
-  (comment in code: "In production, would use cross-encoder here"). The
-  `cross-encoder/ms-marco-MiniLM-L-6-v2` setting in `config.py` is not used.
-- **Compress stage is a no-op.** `FinancialQAAgent._compress_context` joins the
-  reranked chunks and returns them unchanged with a `0.0` compression ratio
-  ("In production, would call LLMLingua here"). `ENABLE_COMPRESSION` and
-  `compression_target_ratio` have no effect.
-- **ARQ worker is not wired in.** Ingestion and report generation run as FastAPI
-  `BackgroundTasks`; the `worker` service is commented out in `docker-compose.yml`.
-- **Model downloads on first use.** Faithfulness scoring loads
-  `facebook/bart-large-mnli` (~1.6 GB) from the Hugging Face hub the first time the
-  QA agent is constructed.
-- **Presidio tuning settings are not wired in.** `PRESIDIO_ENTITIES_TO_SCAN`,
-  `presidio_score_threshold` and `ENABLE_PII_DETECTION` are defined in `config.py`
-  but never read. `PIIDetector.detect_pii` always uses its own hard-coded entity
-  list and a `0.75` threshold, and the ingestion pipeline always runs it.
-- **`bm25_tokens` is never populated.** The column and its GIN index are created by
-  `scripts/init_db.sql`, but the ingestion pipeline does not write tokens, so
-  `HybridRetriever` falls back to tokenizing `chunk.content` at query time. BM25
-  works; the index does not contribute.
-- **No automated tests** (see [Verifying a change](#verifying-a-change)).
+The first infra deploy runs a placeholder image; the first push to `main` builds the real image, pushes it to ACR, points the app at it and smoke-tests `/health`.
 
----
+## Cost notes
 
-## Production Deployment
+Prices checked on Azure's and OpenAI's pricing pages on 2026-10-27. Re-check before relying on them.
 
-There is **no infrastructure-as-code in this repository**; `infrastructure/` only
-holds the Nginx config for the local `docker-compose` stack. A cloud deployment
-(e.g. ECS Fargate + RDS PostgreSQL with pgvector + ElastiCache Redis + S3 + ALB)
-would need to be provisioned separately.
+| Resource | Tier | Price | Notes |
+|---|---|---|---|
+| Container Apps | Consumption, 2 vCPU / 4 GiB, min 0 replicas | $0.000024 per vCPU-s and $0.000003 per GiB-s active; first 180,000 vCPU-s, 360,000 GiB-s and 2M requests per month free | Idle cost is zero when scaled to zero |
+| Postgres Flexible Server | Burstable B1ms, 32 GiB | $12.41 per month plus $0.115 per GiB-month storage | The main fixed cost, about $0.53 a day all in |
+| Container Registry | Basic | $0.167 per day | |
+| Azure AI Search | Free | $0 | 50 MB, 3 indexes, one per subscription; may be deleted after long inactivity |
+| Azure OpenAI | gpt-4o-mini Global | $0.15 in / $0.60 out per 1M tokens | Pay per token |
+| Azure OpenAI | text-embedding-3-small | $0.022 per 1M tokens | Embedding this whole corpus is about 200K tokens |
+| Key Vault | Standard | per-operation pricing | Negligible at this volume |
+| Log Analytics | not deployed | | Use `az containerapp logs show --follow` |
 
----
+Keep a $10 budget alert on the subscription and run `scripts/teardown.sh` when you are done.
+
+## Project structure
+
+```
+backend/
+  app/
+    llm.py                 OpenAI vs Azure OpenAI client (MODEL_PROVIDER)
+    services/azure_search.py   Azure AI Search REST client (RETRIEVAL_BACKEND=azure_search)
+    services/retriever.py  pgvector + BM25 + RRF, or Azure AI Search
+    services/faithfulness_scorer.py   NLI faithfulness
+    agents/                LangGraph QA and report agents
+  eval/                    corpus, questions, harness, prices, run outputs
+  tests/
+infra/main.bicep           Azure resources
+scripts/deploy_infra.sh    create or update the Azure resources
+scripts/teardown.sh        delete them
+.github/workflows/         tests, image build, deploy
+docs/results.md            every measured number, with commands
+frontend/                  React + Vite chat UI
+```
+
+## Known limitations
+
+- **Rerank and compress are pass-throughs.** `_rerank_documents` sorts by the existing score and `_compress_context` returns the context unchanged. The cross-encoder and LLMLingua settings in `config.py` are not used.
+- **Some flags are not wired in.** `ENABLE_PII_DETECTION`, `ENABLE_FAITHFULNESS_SCORING`, `PRESIDIO_ENTITIES_TO_SCAN` and `presidio_score_threshold` are defined but never read.
+- **`bm25_tokens` is never populated,** so BM25 tokenizes chunk text on every query, and each request builds a fresh in-memory BM25 index because the agent is created per request.
+- **Dense search orders by L2 distance** while the HNSW index is built with cosine ops, so Postgres does not use the index for it. Rankings are the same for OpenAI's unit-length embeddings, but it is a sequential scan.
+- **The ARQ worker is not used.** Ingestion runs as a FastAPI background task.
+- **The Azure image is large.** It carries CPU torch, the spaCy model and the NLI weights, so the first request after scale-to-zero waits for the image pull and model load.
+
+## Next steps
+
+- Run the eval rows above with real embeddings, on OpenAI and on Azure, and fill in the table.
+- Use a real cross-encoder for the rerank node and measure it with the same harness.
+- Move the NLI model to a separate service, or a smaller model, to shrink the API image and cold start.
+- Deploy the frontend to Azure Static Web Apps and restrict CORS to it.
+- Add a GitHub environment with required reviewers in front of the deploy job.
 
 ## License
 
