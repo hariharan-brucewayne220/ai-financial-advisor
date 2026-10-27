@@ -1,0 +1,914 @@
+{
+  "meta": {
+    "timestamp_utc": "2026-10-27T17:22:03+00:00",
+    "model_provider": "openai",
+    "chat_model": "gpt-4o",
+    "embedding_model": "text-embedding-3-small",
+    "python": "3.11.17",
+    "machine": "x86_64",
+    "hyde": false,
+    "answer": false,
+    "questions": 42,
+    "top_k": 5
+  },
+  "summary": {
+    "bm25": {
+      "n": 42,
+      "recall@5": 0.7142857142857143,
+      "hit@5": 0.7380952380952381,
+      "mrr@5": 0.5654761904761905,
+      "retrieval_p50_ms": 49.75758800003405,
+      "retrieval_p95_ms": 68.64099255000156,
+      "cost_per_100_usd": 0.0
+    }
+  },
+  "rows": [
+    {
+      "backend": "bm25",
+      "id": "q01",
+      "question": "What is the IRA contribution limit for 2025?",
+      "relevant": [
+        "p590a#0"
+      ],
+      "retrieved": [
+        "p590a#83",
+        "p590a#80",
+        "p590a#17",
+        "p590a#20",
+        "p590a#1"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 68.7496900000042,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q02",
+      "question": "How much can I contribute to an IRA in 2026?",
+      "relevant": [
+        "p590a#2"
+      ],
+      "retrieved": [
+        "p590a#6",
+        "p590a#7",
+        "p590a#15",
+        "p590a#78",
+        "p590a#17"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 47.08584700006213,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q03",
+      "question": "How much is the pilot program contribution to a Trump account?",
+      "relevant": [
+        "p590a#0"
+      ],
+      "retrieved": [
+        "p590a#0",
+        "p590a#1",
+        "p590a#82",
+        "p590a#6",
+        "p590a#20"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 44.52580599991052,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q04",
+      "question": "For 2026, what is the deduction phase-out range for a married couple filing jointly when they are covered by a retirement plan at work?",
+      "relevant": [
+        "p590a#2"
+      ],
+      "retrieved": [
+        "p590a#1",
+        "p590a#2",
+        "p590a#23",
+        "p590a#25",
+        "p590a#31"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 48.72118799994496,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q05",
+      "question": "Is there a penalty for not filing a required Form 8606?",
+      "relevant": [
+        "p590a#29"
+      ],
+      "retrieved": [
+        "p590a#29",
+        "p590a#7",
+        "p590b#15",
+        "p590a#6",
+        "p590a#116"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 45.67525799984651,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q06",
+      "question": "How many IRA-to-IRA rollovers am I allowed in a year?",
+      "relevant": [
+        "p590a#45"
+      ],
+      "retrieved": [
+        "p590b#88",
+        "p590b#28",
+        "p590b#60",
+        "p590a#98",
+        "p590a#49"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 42.21236099988346,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q07",
+      "question": "Can the IRS waive the 60-day deadline for completing a rollover?",
+      "relevant": [
+        "p590a#39"
+      ],
+      "retrieved": [
+        "p590a#43",
+        "p590b#60",
+        "p590a#39",
+        "p590a#44",
+        "p590b#82"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.3333333333333333,
+      "retrieval_ms": 44.52580199995282,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q08",
+      "question": "If I received $6,000 from my IRA, how much can I deposit into a retirement plan under a rollover waiver?",
+      "relevant": [
+        "p590a#43"
+      ],
+      "retrieved": [
+        "p590a#43",
+        "p590a#6",
+        "p590a#7",
+        "p590a#5",
+        "p590a#45"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 46.46512699991945,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q09",
+      "question": "What tax applies to excess IRA contributions that are not withdrawn by the tax return due date?",
+      "relevant": [
+        "p590a#67"
+      ],
+      "retrieved": [
+        "p590a#67",
+        "p590a#68",
+        "p590a#83",
+        "p590b#49",
+        "p590a#60"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 48.207678000153464,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q10",
+      "question": "What happens if my traditional IRA invests in collectibles like art or coins?",
+      "relevant": [
+        "p590a#65"
+      ],
+      "retrieved": [
+        "p590b#46",
+        "p590a#65",
+        "p590a#37",
+        "p590b#8",
+        "p590a#8"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 56.06457499993667,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q11",
+      "question": "Is there an age limit for making Roth IRA contributions?",
+      "relevant": [
+        "p590a#78"
+      ],
+      "retrieved": [
+        "p590a#78",
+        "p590a#83",
+        "p590a#15",
+        "p590a#6",
+        "p590a#7"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 58.10997799994766,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q12",
+      "question": "What is the lifetime limit on rolling a 529 plan into a Roth IRA?",
+      "relevant": [
+        "p590a#87"
+      ],
+      "retrieved": [
+        "p590a#87",
+        "p590a#2",
+        "p590a#37",
+        "p590a#1",
+        "p590a#7"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 43.682514000011,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q13",
+      "question": "How long must a 529 account be open before it can be rolled over to a Roth IRA?",
+      "relevant": [
+        "p590a#87"
+      ],
+      "retrieved": [
+        "p590a#87",
+        "p590a#6",
+        "p590a#78",
+        "p590a#7",
+        "p590a#79"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 62.76709300004768,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q14",
+      "question": "What is the 2025 income limit for the saver's credit for a married couple filing jointly?",
+      "relevant": [
+        "p590a#89"
+      ],
+      "retrieved": [
+        "p590a#1",
+        "p590a#89",
+        "p590a#2",
+        "p590a#19",
+        "p590a#83"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 49.60705900020912,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q15",
+      "question": "Above what modified AGI can a married couple filing jointly not contribute to a Roth IRA for 2025?",
+      "relevant": [
+        "p590a#1"
+      ],
+      "retrieved": [
+        "p590a#78",
+        "p590a#1",
+        "p590a#82",
+        "p590a#89",
+        "p590a#2"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 42.97327300014331,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q16",
+      "question": "Is alimony under a divorce agreement signed after 2018 deductible?",
+      "relevant": [
+        "p590a#3"
+      ],
+      "retrieved": [
+        "p590a#3",
+        "p590a#10",
+        "p590a#53",
+        "p590a#52",
+        "p590b#87"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 43.88838099998793,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q17",
+      "question": "Does the 10% early distribution tax apply when I withdraw an excess contribution before the due date?",
+      "relevant": [
+        "p590a#3"
+      ],
+      "retrieved": [
+        "p590a#67",
+        "p590a#60",
+        "p590b#50",
+        "p590a#70",
+        "p590a#59"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 48.64061600005698,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q18",
+      "question": "Can my spouse and I share a single IRA?",
+      "relevant": [
+        "p590a#8"
+      ],
+      "retrieved": [
+        "p590a#6",
+        "p590a#7",
+        "p590b#83",
+        "p590a#78",
+        "p590a#94"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 49.31750200012175,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q19",
+      "question": "If I inherit a traditional IRA from my father, can I treat it as my own IRA?",
+      "relevant": [
+        "p590a#37",
+        "p590a#38"
+      ],
+      "retrieved": [
+        "p590a#37",
+        "p590b#6",
+        "p590a#99",
+        "p590a#38",
+        "p590b#39"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 50.63349300007758,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q20",
+      "question": "How much tax is withheld when an eligible rollover distribution from an employer plan is paid directly to me?",
+      "relevant": [
+        "p590a#47"
+      ],
+      "retrieved": [
+        "p590a#49",
+        "p590a#48",
+        "p590a#47",
+        "p590a#87",
+        "p590a#39"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.3333333333333333,
+      "retrieval_ms": 62.76244500008943,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q21",
+      "question": "What is the maximum qualified charitable distribution I can exclude from income?",
+      "relevant": [
+        "p590b#24"
+      ],
+      "retrieved": [
+        "p590b#24",
+        "p590b#27",
+        "p590b#89",
+        "p590b#123",
+        "p590b#8"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 49.69237900013468,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q22",
+      "question": "How much can I give through the one-time QCD to a split-interest entity?",
+      "relevant": [
+        "p590b#24"
+      ],
+      "retrieved": [
+        "p590b#24",
+        "p590a#6",
+        "p590a#7",
+        "p590b#27",
+        "p590b#30"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 49.09392500007925,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q23",
+      "question": "What is the penalty for not taking my full required minimum distribution?",
+      "relevant": [
+        "p590b#61"
+      ],
+      "retrieved": [
+        "p590b#18",
+        "p590b#16",
+        "p590b#14",
+        "p590b#89",
+        "p590a#29"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 47.77705900005458,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q24",
+      "question": "Can the excise tax on a missed RMD be reduced?",
+      "relevant": [
+        "p590b#61"
+      ],
+      "retrieved": [
+        "p590b#1",
+        "p590b#18",
+        "p590a#70",
+        "p590b#8",
+        "p590b#51"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 47.68867100005991,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q25",
+      "question": "How much can I withdraw from my IRA for a first home without the 10% additional tax?",
+      "relevant": [
+        "p590b#54"
+      ],
+      "retrieved": [
+        "p590a#6",
+        "p590a#5",
+        "p590b#75",
+        "p590a#54",
+        "p590a#7"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 51.89392800002679,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q26",
+      "question": "What is the limit for a qualified birth or adoption distribution?",
+      "relevant": [
+        "p590b#55"
+      ],
+      "retrieved": [
+        "p590b#55",
+        "p590b#68",
+        "p590b#48",
+        "p590b#67",
+        "p590b#5"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 47.17137699981322,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q27",
+      "question": "What is the maximum distribution for a domestic abuse victim in 2025?",
+      "relevant": [
+        "p590b#55",
+        "p590b#56"
+      ],
+      "retrieved": [
+        "p590b#55",
+        "p590b#57",
+        "p590b#5",
+        "p590b#4",
+        "p590b#48"
+      ],
+      "recall@5": 0.5,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 46.336387000110335,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q28",
+      "question": "How much can be taken as an emergency personal expense distribution?",
+      "relevant": [
+        "p590b#56"
+      ],
+      "retrieved": [
+        "p590b#56",
+        "p590b#57",
+        "p590b#5",
+        "p590b#4",
+        "p590a#3"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 49.94860800002243,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q29",
+      "question": "Who counts as a first-time homebuyer for the IRA early distribution exception?",
+      "relevant": [
+        "p590b#55"
+      ],
+      "retrieved": [
+        "p590b#53",
+        "p590b#55",
+        "p590b#54",
+        "p590b#38",
+        "p590b#79"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 57.54463299990675,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q30",
+      "question": "What active duty period qualifies a reservist for the qualified reservist distribution exception?",
+      "relevant": [
+        "p590b#55",
+        "p590b#56"
+      ],
+      "retrieved": [
+        "p590a#16",
+        "p590b#55",
+        "p590a#15",
+        "p590b#56",
+        "p590b#68"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 52.838308999980654,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q31",
+      "question": "When is a Roth IRA distribution a qualified distribution?",
+      "relevant": [
+        "p590b#66"
+      ],
+      "retrieved": [
+        "p590b#67",
+        "p590a#78",
+        "p590b#73",
+        "p590b#66",
+        "p590b#74"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.25,
+      "retrieval_ms": 1008.1508729999769,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q32",
+      "question": "Do I have to take required minimum distributions from my Roth IRA?",
+      "relevant": [
+        "p590b#73",
+        "p590b#74"
+      ],
+      "retrieved": [
+        "p590b#5",
+        "p590b#4",
+        "p590b#89",
+        "p590a#7",
+        "p590a#37"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 52.68198500016297,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q33",
+      "question": "What does the 10-year rule require for an inherited IRA?",
+      "relevant": [
+        "p590b#16",
+        "p590b#17"
+      ],
+      "retrieved": [
+        "p590b#18",
+        "p590b#16",
+        "p590b#14",
+        "p590a#37",
+        "p590b#1"
+      ],
+      "recall@5": 0.5,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 50.88190199990095,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q34",
+      "question": "What does the 5-year rule require of an IRA beneficiary?",
+      "relevant": [
+        "p590b#16"
+      ],
+      "retrieved": [
+        "p590b#18",
+        "p590b#16",
+        "p590b#68",
+        "p590a#8",
+        "p590a#89"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 50.43091499987895,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q35",
+      "question": "Who is an eligible designated beneficiary of an IRA?",
+      "relevant": [
+        "p590b#14"
+      ],
+      "retrieved": [
+        "p590b#15",
+        "p590b#17",
+        "p590b#13",
+        "p590b#18",
+        "p590b#23"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 54.134695999891846,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q36",
+      "question": "Which life expectancy table does an IRA owner normally use to figure RMDs?",
+      "relevant": [
+        "p590b#20"
+      ],
+      "retrieved": [
+        "p590b#18",
+        "p590b#19",
+        "p590b#16",
+        "p590b#12",
+        "p590b#13"
+      ],
+      "recall@5": 0.0,
+      "hit@5": 0.0,
+      "rr@5": 0.0,
+      "retrieval_ms": 65.7718920001571,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q37",
+      "question": "In the IRS example, what was Justin's required minimum distribution for 2025?",
+      "relevant": [
+        "p590b#21"
+      ],
+      "retrieved": [
+        "p590b#21",
+        "p590b#15",
+        "p590b#89",
+        "p590b#13",
+        "p590b#14"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 66.57574099995145,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q38",
+      "question": "Can I take money from my IRA early for unreimbursed medical expenses without the 10% additional tax?",
+      "relevant": [
+        "p590b#49"
+      ],
+      "retrieved": [
+        "p590b#49",
+        "p590b#47",
+        "p590b#123",
+        "p590b#68",
+        "p590b#124"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 55.8329389998562,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q39",
+      "question": "Is the 5-year period for a Roth conversion the same as the 5-year period for qualified distributions?",
+      "relevant": [
+        "p590b#68"
+      ],
+      "retrieved": [
+        "p590b#68",
+        "p590b#74",
+        "p590b#73",
+        "p590a#89",
+        "p590b#66"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 49.822796999933416,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q40",
+      "question": "Was there excise tax relief for certain 2024 required minimum distributions?",
+      "relevant": [
+        "p590b#0"
+      ],
+      "retrieved": [
+        "p590b#0",
+        "p590b#75",
+        "p590a#2",
+        "p590a#70",
+        "p590b#18"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 1.0,
+      "retrieval_ms": 49.5733550001205,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q41",
+      "question": "If I reached age 72 after December 31, 2022, when must I start taking RMDs?",
+      "relevant": [
+        "p590b#9"
+      ],
+      "retrieved": [
+        "p590b#91",
+        "p590b#9",
+        "p590b#89",
+        "p590b#92",
+        "p590b#5"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.5,
+      "retrieval_ms": 69.24801499985733,
+      "usage": {},
+      "cost_usd": 0.0
+    },
+    {
+      "backend": "bm25",
+      "id": "q42",
+      "question": "How long after a child's birth can I take a qualified birth or adoption distribution?",
+      "relevant": [
+        "p590b#55"
+      ],
+      "retrieved": [
+        "p590b#5",
+        "p590b#4",
+        "p590b#55",
+        "p590b#48",
+        "p590b#57"
+      ],
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "rr@5": 0.3333333333333333,
+      "retrieval_ms": 49.87740699993992,
+      "usage": {},
+      "cost_usd": 0.0
+    }
+  ]
+}

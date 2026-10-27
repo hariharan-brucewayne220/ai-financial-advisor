@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "timestamp_utc": "2026-10-27T17:21:25+00:00",
+    "model_provider": "openai",
+    "chat_model": "gpt-4o",
+    "embedding_model": "text-embedding-3-small",
+    "python": "3.11.17",
+    "machine": "x86_64"
+  },
+  "corpus": {
+    "documents": {
+      "p590a": {
+        "title": "IRS Publication 590-A (2025), Contributions to IRAs",
+        "pdf_bytes": 1817459,
+        "sha256": "ca0e42873cfd66d2d9bfd082125d381f8a0c2f3b0a441d7d65ab5ccc06a0e1c7",
+        "chunks": 119,
+        "tokens": 79770,
+        "text_chars": 330448
+      },
+      "p590b": {
+        "title": "IRS Publication 590-B (2025), Distributions from IRAs",
+        "pdf_bytes": 2097777,
+        "sha256": "d18a592e55ce56d43953dc338272ece3984565792d6dca06989a6ca8121f7360",
+        "chunks": 125,
+        "tokens": 120457,
+        "text_chars": 351794
+      }
+    },
+    "chunks": 244,
+    "tokens": 200227
+  },
+  "questions": 42,
+  "embedding_usage": {},
+  "embedding_cost_usd": 0.0,
+  "azure_search_index_stats": null
+}

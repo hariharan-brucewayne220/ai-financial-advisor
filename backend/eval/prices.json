@@ -1,0 +1,16 @@
+{
+  "_note": "USD per 1M tokens, standard (non-batch) pricing. Checked 2026-10-27 on the pages below; re-check before quoting.",
+  "_sources": {
+    "openai": "https://developers.openai.com/api/docs/pricing",
+    "azure_openai": "https://azure.microsoft.com/en-us/pricing/details/azure-openai/ (Global deployment; embeddings listed as $0.000022 per 1K tokens)"
+  },
+  "openai": {
+    "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+    "gpt-4o": {"input": 2.50, "output": 10.00},
+    "text-embedding-3-small": {"input": 0.02, "output": 0.0}
+  },
+  "azure_openai": {
+    "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+    "text-embedding-3-small": {"input": 0.022, "output": 0.0}
+  }
+}
