@@ -14,24 +14,42 @@ NLI classifies relationship between premise (retrieved docs) and hypothesis (ans
 This gives us a 0.0-1.0 faithfulness score per answer.
 """
 
+import asyncio
 import logging
-from typing import List, Tuple
+import re
+from typing import Callable, List, Tuple
 
 logger = logging.getLogger(__name__)
+
+NLI_MODEL = "facebook/bart-large-mnli"
+
+# BART's input limit is 1024 tokens, so long contexts are scored in
+# overlapping word windows and each sentence keeps its best window.
+WINDOW_WORDS = 300
+WINDOW_STRIDE = 250
+
+# Citations the QA prompt asks for, e.g. "(Document: [ab12cd34])". They are
+# not claims, and leaving them in drags entailment down.
+_CITATION_RE = re.compile(r"\((?:Document|Source|Live Market Data)[^)]*\)", re.IGNORECASE)
 
 
 class FaithfulnessScorer:
     """Score faithfulness of generated answers against retrieved context."""
 
-    def __init__(self):
-        """Initialize NLI model."""
+    def __init__(self, classifier: Callable | None = None):
+        """
+        Initialize NLI model.
+
+        classifier: optional stand-in for the transformers pipeline (tests).
+        """
+        if classifier is not None:
+            self.classifier = classifier
+            return
         try:
             from transformers import pipeline
-            # zero-shot-classification works like NLI
-            self.classifier = pipeline(
-                "zero-shot-classification",
-                model="facebook/bart-large-mnli",
-            )
+            # Plain NLI: premise = context, hypothesis = answer sentence,
+            # output = probabilities for contradiction / neutral / entailment
+            self.classifier = pipeline("text-classification", model=NLI_MODEL)
         except ImportError:
             logger.warning("transformers not installed. NLI scoring disabled. pip install transformers")
             self.classifier = None
@@ -39,6 +57,9 @@ class FaithfulnessScorer:
     async def score(self, context: str, answer: str) -> float:
         """
         Score how faithful answer is to context.
+
+        Each answer sentence gets the highest entailment probability over
+        the context windows; the answer's score is the mean over sentences.
 
         Args:
             context: Retrieved document chunks
@@ -51,21 +72,16 @@ class FaithfulnessScorer:
             return 1.0  # Disabled, return neutral score
 
         try:
-            # Split answer into sentences for sentence-level scoring
-            sentences = self._split_sentences(answer)
+            sentences = self._split_sentences(_CITATION_RE.sub("", answer))
+            premises = self._windows(context)
 
-            if not sentences:
+            if not sentences or not premises:
                 return 0.0
 
-            scores = []
-            for sentence in sentences:
-                # Use NLI to check if context entails sentence
-                # (i.e., does context support this sentence?)
-                score = await self._score_sentence(context, sentence)
-                scores.append(score)
+            # Model inference is CPU-bound; keep it off the event loop
+            scores = await asyncio.to_thread(self._sentence_scores, premises, sentences)
 
-            # Average sentence-level scores
-            overall_score = sum(scores) / len(scores) if scores else 0.0
+            overall_score = sum(scores) / len(scores)
             logger.debug(f"Faithfulness score: {overall_score:.3f} ({len(sentences)} sentences)")
             return overall_score
 
@@ -73,31 +89,39 @@ class FaithfulnessScorer:
             logger.error(f"Error scoring faithfulness: {e}")
             return 0.5  # Neutral score on error
 
-    async def _score_sentence(self, context: str, sentence: str) -> float:
-        """
-        Score single sentence using NLI.
+    def _sentence_scores(self, premises: List[str], sentences: List[str]) -> List[float]:
+        """Best entailment probability per sentence across all premises."""
+        pairs = [{"text": p, "text_pair": s} for s in sentences for p in premises]
+        outputs = self.classifier(pairs, top_k=None, truncation=True, batch_size=8)
 
-        Premise: context (what we know)
-        Hypothesis: sentence (claim to verify)
-        """
-        try:
-            result = self.classifier(
-                context,
-                [sentence],
-                hypothesis_template="This text is about {}.",
-            )
+        best = []
+        for i in range(len(sentences)):
+            window_outputs = outputs[i * len(premises):(i + 1) * len(premises)]
+            best.append(max(self._entailment(o) for o in window_outputs))
+        return best
 
-            # Extract entailment score
-            # Result labels: ['ENTAILMENT', 'NEUTRAL', 'CONTRADICTION']
-            scores = dict(zip(result['labels'], result['scores']))
+    @staticmethod
+    def _entailment(labels: List[dict]) -> float:
+        """Pick the entailment probability out of one pipeline result."""
+        for item in labels:
+            if item["label"].lower() == "entailment":
+                return float(item["score"])
+        raise ValueError(f"No entailment label in NLI output: {labels}")
 
-            # Entailment = faithful, Contradiction = unfaithful
-            entailment_score = scores.get('ENTAILMENT', 0.0)
-            return entailment_score
-
-        except Exception as e:
-            logger.warning(f"Error in sentence scoring: {e}")
-            return 0.5
+    @staticmethod
+    def _windows(text: str) -> List[str]:
+        """Split context into overlapping word windows."""
+        words = text.split()
+        if not words:
+            return []
+        if len(words) <= WINDOW_WORDS:
+            return [" ".join(words)]
+        windows = []
+        for start in range(0, len(words), WINDOW_STRIDE):
+            windows.append(" ".join(words[start:start + WINDOW_WORDS]))
+            if start + WINDOW_WORDS >= len(words):
+                break
+        return windows
 
     @staticmethod
     def _split_sentences(text: str) -> List[str]:
@@ -106,7 +130,6 @@ class FaithfulnessScorer:
 
         Simple heuristic splitter (in production, use nltk or spacy).
         """
-        import re
         # Split on periods, exclamation, question marks
         sentences = re.split(r'(?<=[.!?])\s+', text)
         return [s.strip() for s in sentences if s.strip()]
