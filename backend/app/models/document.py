@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 from typing import Optional, List
 
-from sqlalchemy import Column, String, DateTime, BIGINT, Integer, Index, ForeignKey, Text, Boolean
+from sqlalchemy import Column, String, DateTime, BIGINT, Integer, Index, ForeignKey, Text, Boolean, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship
@@ -45,7 +45,7 @@ class Document(Base):
     __table_args__ = (
         Index("idx_documents_client_id", "client_id"),
         Index("idx_documents_status", "status"),
-        Index("idx_documents_created_at", "created_at", postgresql_using="DESC"),
+        Index("idx_documents_created_at", text("created_at DESC")),
     )
 
     def __repr__(self) -> str:
@@ -78,7 +78,11 @@ class DocumentChunk(Base):
     # Indexes
     __table_args__ = (
         Index("idx_document_chunks_document_id", "document_id"),
-        Index("idx_document_chunks_embedding", "embedding", postgresql_using="hnsw"),
+        Index(
+            "idx_document_chunks_embedding", "embedding", postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+            postgresql_with={"m": 16, "ef_construction": 64},
+        ),
         Index("idx_document_chunks_bm25_tokens", "bm25_tokens", postgresql_using="gin"),
     )
 

@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 from typing import Optional
 
-from sqlalchemy import Column, String, DateTime, Text, Index, ForeignKey
+from sqlalchemy import Column, String, DateTime, Text, Index, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -40,7 +40,7 @@ class Report(Base):
     __table_args__ = (
         Index("idx_reports_client_id", "client_id"),
         Index("idx_reports_status", "status"),
-        Index("idx_reports_created_at", "created_at", postgresql_using="DESC"),
+        Index("idx_reports_created_at", text("created_at DESC")),
     )
 
     def __repr__(self) -> str:

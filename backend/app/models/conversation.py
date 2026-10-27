@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 from typing import Optional, List
 
-from sqlalchemy import Column, String, DateTime, Text, Index, ForeignKey, NUMERIC
+from sqlalchemy import Column, String, DateTime, Text, Index, ForeignKey, NUMERIC, text
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 
@@ -78,7 +78,7 @@ class Message(Base):
     # Indexes
     __table_args__ = (
         Index("idx_messages_conversation_id", "conversation_id"),
-        Index("idx_messages_created_at", "created_at", postgresql_using="DESC"),
+        Index("idx_messages_created_at", text("created_at DESC")),
     )
 
     def __repr__(self) -> str:

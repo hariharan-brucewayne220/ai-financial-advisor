@@ -125,17 +125,22 @@ def create_app() -> FastAPI:
         except Exception:
             db_ok = False
 
-        try:
-            import redis.asyncio as redis
-            r = redis.from_url(settings.redis_url)
-            pong = await r.ping()
-            redis_ok = bool(pong)
-            await r.close()
-        except Exception:
-            redis_ok = False
+        if settings.redis_url is None:
+            # Not deployed (e.g. Azure Container Apps); nothing in the
+            # request path needs it, so it does not degrade health
+            redis_ok = "not_configured"
+        else:
+            try:
+                import redis.asyncio as redis
+                r = redis.from_url(settings.redis_url)
+                pong = await r.ping()
+                redis_ok = bool(pong)
+                await r.close()
+            except Exception:
+                redis_ok = False
 
         return {
-            "status": "healthy" if (db_ok and redis_ok) else "degraded",
+            "status": "healthy" if (db_ok and redis_ok is not False) else "degraded",
             "database": db_ok,
             "redis": redis_ok,
         }

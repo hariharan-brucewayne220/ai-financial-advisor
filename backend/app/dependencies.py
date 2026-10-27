@@ -4,6 +4,7 @@ Dependency Injection for FastAPI
 Provides database sessions, current user context, and other shared dependencies.
 """
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from fastapi import Depends, HTTPException, status
 from jose import JWTError
@@ -40,6 +41,9 @@ async_session_maker = async_sessionmaker(
 async def init_db():
     """Initialize database tables."""
     async with engine.begin() as conn:
+        # The Vector column type needs pgvector. Docker Compose creates it in
+        # scripts/init_db.sql; managed Postgres (Azure) starts without it.
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         # Create all tables from models
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized")

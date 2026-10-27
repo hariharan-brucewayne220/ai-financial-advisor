@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 from typing import Optional, List
 
-from sqlalchemy import Column, String, DateTime, Text, Integer, Index, ForeignKey, NUMERIC
+from sqlalchemy import Column, String, DateTime, Text, Integer, Index, ForeignKey, NUMERIC, text
 from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from sqlalchemy.orm import relationship
 
@@ -64,7 +64,7 @@ class AuditLog(Base):
     __table_args__ = (
         Index("idx_audit_logs_advisor_id", "advisor_id"),
         Index("idx_audit_logs_client_id", "client_id"),
-        Index("idx_audit_logs_created_at", "created_at", postgresql_using="DESC"),
+        Index("idx_audit_logs_created_at", text("created_at DESC")),
         Index("idx_audit_logs_action", "action"),
     )
 

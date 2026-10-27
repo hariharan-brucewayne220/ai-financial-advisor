@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     # ========================================================================
     # REDIS & CACHING
     # ========================================================================
-    redis_url: str = Field(..., alias="REDIS_URL")
+    # Optional: only /health/full and the (disabled) ARQ worker use Redis
+    redis_url: str | None = Field(default=None, alias="REDIS_URL")
     redis_queue_db: int = Field(default=1, alias="REDIS_QUEUE_DB")
     cache_ttl_seconds: int = Field(default=3600)
 
