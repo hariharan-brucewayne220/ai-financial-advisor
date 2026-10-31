@@ -2,7 +2,7 @@
 //
 // One resource group holding:
 //   - Container Apps environment (consumption) + the API container app, scale 0..1
-//   - Azure Container Registry (Basic) for the API image
+//   - Azure Container Registry (Basic, or Standard under the free-services benefit)
 //   - Key Vault (RBAC) with SECRET-KEY and DATABASE-URL
 //   - Azure Database for PostgreSQL Flexible Server (B1ms) with pgvector allowed
 //   - Azure OpenAI with gpt-4o-mini and text-embedding-3-small deployments (keys disabled)
@@ -45,6 +45,10 @@ param apiTargetPort int = 80
 @description('pgvector or azure_search')
 @allowed(['pgvector', 'azure_search'])
 param retrievalBackend string = 'azure_search'
+
+@description('Container Registry tier. Basic is cheapest at list price; the Azure free-services benefit (12 months) covers one Standard registry instead.')
+@allowed(['Basic', 'Standard'])
+param acrSku string = 'Basic'
 
 @description('Tokens-per-minute capacity, in thousands, for each model deployment.')
 param chatCapacityK int = 10
@@ -124,7 +128,7 @@ resource githubFederation 'Microsoft.ManagedIdentity/userAssignedIdentities/fede
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: names.acr
   location: location
-  sku: { name: 'Basic' }
+  sku: { name: acrSku }
   properties: {
     adminUserEnabled: false
   }

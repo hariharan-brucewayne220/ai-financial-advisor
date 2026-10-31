@@ -139,8 +139,8 @@ Prices checked on Azure's and OpenAI's pricing pages on 2026-10-27. Re-check bef
 | Resource | Tier | Price | Notes |
 |---|---|---|---|
 | Container Apps | Consumption, 2 vCPU / 4 GiB, min 0 replicas | $0.000024 per vCPU-s and $0.000003 per GiB-s active; first 180,000 vCPU-s, 360,000 GiB-s and 2M requests per month free | Idle cost is zero when scaled to zero |
-| Postgres Flexible Server | Burstable B1ms, 32 GiB | $12.41 per month plus $0.115 per GiB-month storage | The main fixed cost, about $0.53 a day all in |
-| Container Registry | Basic | $0.167 per day | |
+| Postgres Flexible Server | Burstable B1ms, 32 GiB | $12.41 per month plus $0.115 per GiB-month storage | About $0.53 a day at list price. The free-services benefit covers 750 hours of B1MS, 32 GB storage and 32 GB backup per month for 12 months |
+| Container Registry | Basic (default) or Standard | $0.167 per day Basic, $0.667 per day Standard | The free-services benefit (12 months, new customers) covers one Standard registry: deploy with `ACR_SKU=Standard` |
 | Azure AI Search | Free | $0 | 50 MB, 3 indexes, one per subscription; may be deleted after long inactivity |
 | Azure OpenAI | gpt-4o-mini, Standard (regional) deployment | $0.165 in / $0.66 out per 1M tokens | Pay per token. Standard, not GlobalStandard: student subscriptions can have 0 GlobalStandard quota for this model |
 | Azure OpenAI | text-embedding-3-small | $0.022 per 1M tokens | Embedding this whole corpus is about 200K tokens |

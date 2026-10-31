@@ -7,11 +7,15 @@
 # the script restarts the app so it picks up the new values.
 #
 #   RG=finadv-rg LOCATION=eastus2 ./scripts/deploy_infra.sh
+#
+# ACR_SKU=Standard uses the registry tier covered by the Azure free-services
+# benefit (one Standard registry for 12 months); the default is Basic.
 set -euo pipefail
 
 RG="${RG:-finadv-rg}"
 LOCATION="${LOCATION:-eastus2}"
 PREFIX="${PREFIX:-finadv}"
+ACR_SKU="${ACR_SKU:-Basic}"
 APP="${PREFIX}-api"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -36,7 +40,7 @@ az deployment group create \
   --name "finadv-$(date +%Y%m%d%H%M%S)" \
   --template-file "$REPO_ROOT/infra/main.bicep" \
   --parameters prefix="$PREFIX" operatorPrincipalId="$OPERATOR_ID" operatorIpAddress="$OPERATOR_IP" \
-               apiImage="$IMAGE" apiTargetPort="$PORT" \
+               apiImage="$IMAGE" apiTargetPort="$PORT" acrSku="$ACR_SKU" \
   --query properties.outputs -o json > "$REPO_ROOT/infra/.outputs.json"
 
 out() { python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]]['value'])" "$REPO_ROOT/infra/.outputs.json" "$1"; }
